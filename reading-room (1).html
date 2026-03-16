@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReadRoom Pro — Library Management</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #14171f;
+    --surface2: #1a1e29;
+    --surface3: #222736;
+    --border: #2a2f3f;
+    --border2: #343b50;
+    --text: #e8eaf0;
+    --text2: #9aa0b8;
+    --text3: #5c6280;
+    --accent: #f0b840;
+    --accent2: #e09020;
+    --green: #3fcf8e;
+    --red: #f05a5a;
+    --blue: #5a9cf0;
+    --purple: #a78bfa;
+    --orange: #fb923c;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--text2); font-weight: 400; font-size: 14px; margin-left: 8px; font-family: 'DM Sans', sans-serif; }
+  .header-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text3);
+    background: var(--surface2);
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 0;
+    min-height: calc(100vh - 64px);
+  }
+  .main-panel { border-right: 1px solid var(--border); overflow-y: auto; }
+  .side-panel { overflow-y: auto; background: var(--surface); }
+
+  /* NAV TABS */
+  .nav-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 16px 20px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    transition: all 0.2s;
+  }
+  .tab-btn.active {
+    background: var(--bg);
+    color: var(--accent);
+    border-color: var(--border);
+    border-bottom-color: var(--bg);
+    margin-bottom: -1px;
+  }
+  .tab-btn:hover:not(.active) { color: var(--text); background: var(--surface2); }
+
+  /* CONTENT */
+  .tab-content { display: none; padding: 20px; }
+  .tab-content.active { display: block; }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .stat-value { font-size: 26px; font-weight: 600; font-family: 'DM Mono', monospace; }
+  .stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .stat-card.green .stat-value { color: var(--green); }
+  .stat-card.red .stat-value { color: var(--red); }
+  .stat-card.yellow .stat-value { color: var(--accent); }
+  .stat-card.blue .stat-value { color: var(--blue); }
+
+  /* SECTION HEADER */
+  .section-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .badge {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid;
+  }
+  .badge.green { color: var(--green); border-color: var(--green); background: rgba(63,207,142,0.08); }
+  .badge.yellow { color: var(--accent); border-color: var(--accent); background: rgba(240,184,64,0.08); }
+  .badge.red { color: var(--red); border-color: var(--red); background: rgba(240,90,90,0.08); }
+  .badge.blue { color: var(--blue); border-color: var(--blue); background: rgba(90,156,240,0.08); }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+  }
+
+  /* SEAT GRID */
+  .seat-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .seat-btn {
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    transition: all 0.15s;
+    position: relative;
+    min-height: 52px;
+  }
+  .seat-btn:hover { transform: scale(1.06); z-index: 2; }
+  .seat-num { font-size: 13px; font-weight: 600; }
+  .seat-slot { font-size: 9px; margin-top: 2px; opacity: 0.8; }
+
+  .seat-available {
+    background: rgba(63,207,142,0.08);
+    border-color: rgba(63,207,142,0.3);
+    color: var(--green);
+  }
+  .seat-morning {
+    background: rgba(240,184,64,0.12);
+    border-color: rgba(240,184,64,0.4);
+    color: var(--accent);
+  }
+  .seat-evening {
+    background: rgba(90,156,240,0.1);
+    border-color: rgba(90,156,240,0.4);
+    color: var(--blue);
+  }
+  .seat-fullday {
+    background: rgba(240,90,90,0.1);
+    border-color: rgba(240,90,90,0.4);
+    color: var(--red);
+  }
+  .seat-expired {
+    background: rgba(92,98,128,0.15);
+    border-color: rgba(92,98,128,0.3);
+    color: var(--text3);
+    cursor: default;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    width: 480px;
+    max-width: 95vw;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  }
+  .modal-hdr {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .modal-close {
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-close:hover { background: var(--surface2); color: var(--text); }
+  .modal-body { padding: 20px 24px; }
+
+  /* FORM */
+  .form-row { margin-bottom: 16px; }
+  .form-row label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .form-row input, .form-row select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-row input:focus, .form-row select:focus { border-color: var(--accent); }
+  .form-row select option { background: var(--surface2); }
+  .form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border2); }
+  .btn-danger { background: rgba(240,90,90,0.15); color: var(--red); border: 1px solid rgba(240,90,90,0.3); }
+  .btn-danger:hover { background: rgba(240,90,90,0.25); }
+  .btn-green { background: rgba(63,207,142,0.15); color: var(--green); border: 1px solid rgba(63,207,142,0.3); }
+  .btn-green:hover { background: rgba(63,207,142,0.25); }
+  .btn-blue { background: rgba(90,156,240,0.15); color: var(--blue); border: 1px solid rgba(90,156,240,0.3); }
+  .btn-blue:hover { background: rgba(90,156,240,0.25); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-row { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+
+  /* INFO GRID in modal */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+  .info-item .lbl { font-size: 11px; color: var(--text3); margin-bottom: 3px; }
+  .info-item .val { font-size: 14px; font-weight: 500; }
+
+  /* PAYMENT STATUS */
+  .payment-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .payment-status.paid { background: rgba(63,207,142,0.15); color: var(--green); }
+  .payment-status.pending { background: rgba(240,184,64,0.15); color: var(--accent); }
+
+  /* BOOKINGS TABLE */
+  .bookings-table { width: 100%; border-collapse: collapse; }
+  .bookings-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .bookings-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .bookings-table tr:hover td { background: var(--surface2); }
+  .bookings-table tr:last-child td { border-bottom: none; }
+  .tbl-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  /* SIDEBAR */
+  .side-section { padding: 16px; border-bottom: 1px solid var(--border); }
+  .side-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text3);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .side-section-title .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+
+  /* EXPIRY CARDS */
+  .expiry-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .expiry-card .name { font-size: 13px; font-weight: 500; }
+  .expiry-card .meta { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .expiry-card.urgent { border-color: rgba(240,90,90,0.4); background: rgba(240,90,90,0.06); }
+  .expiry-card.warning { border-color: rgba(240,184,64,0.4); background: rgba(240,184,64,0.06); }
+
+  /* WAITING LIST */
+  .waiting-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .waiting-card .info .name { font-size: 13px; font-weight: 500; }
+  .waiting-card .info .meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* FINANCE */
+  .finance-card {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .finance-card .fc-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; }
+  .finance-card .fc-value { font-size: 22px; font-weight: 700; font-family: 'DM Mono', monospace; margin-top: 4px; }
+
+  /* WAITING LIST FORM (compact) */
+  .compact-form {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .compact-form input, .compact-form select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    margin-bottom: 8px;
+  }
+  .compact-form input:last-of-type, .compact-form select:last-of-type { margin-bottom: 0; }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 32px 16px; color: var(--text3); font-size: 13px; }
+  .empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+  /* SECTION SWITCH TABS */
+  .section-switch {
+    display: flex;
+    gap: 4px;
+    background: var(--surface2);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    width: fit-content;
+    margin-bottom: 16px;
+  }
+  .section-switch button {
+    padding: 7px 16px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .section-switch button.active {
+    background: var(--accent);
+    color: #000;
+  }
+
+  /* FILTERS */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-row input, .filter-row select {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 7px 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+  }
+  .filter-row input { flex: 1; min-width: 160px; }
+
+  /* Receipt stamp */
+  .receipt-stamp {
+    display: inline-block;
+    border: 3px solid var(--green);
+    color: var(--green);
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 4px;
+    padding: 6px 16px;
+    border-radius: 6px;
+    transform: rotate(-8deg);
+    opacity: 0.85;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  /* Slot colors in tables */
+  .slot-morning { color: var(--accent); }
+  .slot-evening { color: var(--blue); }
+  .slot-fullday { color: var(--red); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 999;
+    display: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    animation: slideIn 0.3s ease;
+    max-width: 320px;
+  }
+  .toast.show { display: block; }
+  .toast.success { border-color: rgba(63,207,142,0.5); color: var(--green); }
+  .toast.error { border-color: rgba(240,90,90,0.5); color: var(--red); }
+  @keyframes slideIn {
+    from { transform: translateY(16px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .side-panel { border-top: 1px solid var(--border); }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .seat-grid { grid-template-columns: repeat(6, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo" id="header-logo">ReadRoom <span id="header-sub">Pro — Library Management</span></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="header-date" id="header-date"></div>
+    <button class="btn btn-ghost btn-sm" onclick="openSettings()" title="Library Settings" style="font-size:15px;padding:6px 10px">⚙️</button>
+  </div>
+</header>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal" style="width:420px">
+    <div class="modal-hdr">
+      <div class="modal-title">⚙️ Library Settings</div>
+      <button class="modal-close" onclick="closeModal('settings-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Library / Reading Room Name</label>
+        <input type="text" id="s-lib-name" placeholder="e.g. Sunrise Reading Room">
+      </div>
+      <div class="form-row">
+        <label>Tagline / Sub-title</label>
+        <input type="text" id="s-lib-tagline" placeholder="e.g. Your Study Destination">
+      </div>
+      <div class="form-row">
+        <label>Address</label>
+        <input type="text" id="s-lib-address" placeholder="e.g. Near Bus Stand, Barmer, Rajasthan">
+      </div>
+      <div class="form-row">
+        <label>Contact Phone</label>
+        <input type="text" id="s-lib-phone" placeholder="e.g. 9876543210">
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;padding:8px 10px;background:var(--surface2);border-radius:6px;border:1px solid var(--border)">
+        ℹ️ Name &amp; address will also appear on all PDF receipts automatically.
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveSettings()">💾 Save Changes</button>
+        <button class="btn btn-ghost" onclick="closeModal('settings-modal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- MAIN -->
+  <div class="main-panel">
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('seats')">🪑 Seats</button>
+      <button class="tab-btn" onclick="switchTab('bookings')">📋 Bookings</button>
+      <button class="tab-btn" onclick="switchTab('finance')">💰 Finance</button>
+    </div>
+
+    <!-- SEATS TAB -->
+    <div class="tab-content active" id="tab-seats">
+      <div class="stats-row">
+        <div class="stat-card green">
+          <div class="stat-label">Available</div>
+          <div class="stat-value" id="stat-available">—</div>
+          <div class="stat-sub">seats free</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Occupied</div>
+          <div class="stat-value" id="stat-occupied">—</div>
+          <div class="stat-sub">full day</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">Morning</div>
+          <div class="stat-value" id="stat-morning">—</div>
+          <div class="stat-sub">7am–2pm</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Evening</div>
+          <div class="stat-value" id="stat-evening">—</div>
+          <div class="stat-sub">2pm–9pm</div>
+        </div>
+      </div>
+
+      <div class="section-switch">
+        <button class="active" id="sec-btn-a" onclick="switchSection('A')">Section A — 42 Seats</button>
+        <button id="sec-btn-b" onclick="switchSection('B')">Section B — 44 Seats</button>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(63,207,142,0.6)"></div>Available</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(240,184,64,0.6)"></div>Morning Only</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(90,156,240,0.6)"></div>Evening Only</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(240,90,90,0.6)"></div>Full Day</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(92,98,128,0.4)"></div>Expired</div>
+      </div>
+
+      <div class="seat-grid" id="seat-grid-A"></div>
+      <div class="seat-grid" id="seat-grid-B" style="display:none"></div>
+    </div>
+
+    <!-- BOOKINGS TAB -->
+    <div class="tab-content" id="tab-bookings">
+      <div class="section-hdr">
+        <div class="section-title">All Bookings</div>
+        <button class="btn btn-primary btn-sm" onclick="openBookingModal(null,null)">+ New Booking</button>
+      </div>
+      <div class="filter-row">
+        <input type="text" id="search-booking" placeholder="Search by name or seat…" oninput="renderBookingsTable()">
+        <select id="filter-section" onchange="renderBookingsTable()">
+          <option value="">All Sections</option>
+          <option value="A">Section A</option>
+          <option value="B">Section B</option>
+        </select>
+        <select id="filter-slot" onchange="renderBookingsTable()">
+          <option value="">All Slots</option>
+          <option value="Morning">Morning</option>
+          <option value="Evening">Evening</option>
+          <option value="Full Day">Full Day</option>
+        </select>
+        <select id="filter-payment" onchange="renderBookingsTable()">
+          <option value="">All Payments</option>
+          <option value="Paid">Paid</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+      <div class="tbl-wrap">
+        <table class="bookings-table" id="bookings-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Section / Seat</th>
+              <th>Slot</th>
+              <th>Period</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bookings-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FINANCE TAB -->
+    <div class="tab-content" id="tab-finance">
+      <div class="section-title" style="margin-bottom:16px">Finance Dashboard</div>
+      <div class="stats-row" style="grid-template-columns: repeat(3,1fr)">
+        <div class="stat-card green">
+          <div class="stat-label">Revenue This Month</div>
+          <div class="stat-value" id="fin-revenue">₹0</div>
+          <div class="stat-sub">paid bookings</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">Pending Dues</div>
+          <div class="stat-value" id="fin-pending">₹0</div>
+          <div class="stat-sub">unpaid</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Total Bookings</div>
+          <div class="stat-value" id="fin-total">0</div>
+          <div class="stat-sub">all time</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-bottom:12px; margin-top:8px">Monthly Breakdown</div>
+      <div class="tbl-wrap">
+        <table class="bookings-table">
+          <thead>
+            <tr><th>Slot Type</th><th>Count</th><th>Revenue</th><th>Pending</th></tr>
+          </thead>
+          <tbody id="finance-breakdown"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="side-panel">
+    <!-- Expiry Alerts -->
+    <div class="side-section">
+      <div class="side-section-title">
+        <div class="dot" style="background:var(--red)"></div>
+        Expiring Soon (3 Days)
+      </div>
+      <div id="expiry-list"></div>
+    </div>
+
+    <!-- Waiting List -->
+    <div class="side-section">
+      <div class="side-section-title">
+        <div class="dot" style="background:var(--purple)"></div>
+        Waiting List
+      </div>
+      <div class="compact-form" id="waiting-form">
+        <input type="text" id="w-name" placeholder="Student Name">
+        <input type="text" id="w-phone" placeholder="Phone Number">
+        <select id="w-slot">
+          <option value="">Preferred Slot</option>
+          <option value="Morning">Morning (7AM–2PM)</option>
+          <option value="Evening">Evening (2PM–9PM)</option>
+          <option value="Full Day">Full Day (7AM–9PM)</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px" onclick="addToWaiting()">+ Add to Waiting List</button>
+      </div>
+      <div id="waiting-list"></div>
+    </div>
+
+    <!-- Quick Book -->
+    <div class="side-section">
+      <div class="side-section-title">
+        <div class="dot" style="background:var(--accent)"></div>
+        Quick Stats
+      </div>
+      <div class="finance-card">
+        <div class="fc-label">Total Active Bookings</div>
+        <div class="fc-value" id="qs-active" style="color:var(--green)">0</div>
+      </div>
+      <div class="finance-card">
+        <div class="fc-label">Expiring This Week</div>
+        <div class="fc-value" id="qs-week" style="color:var(--orange)">0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOOKING MODAL -->
+<div class="modal-overlay" id="booking-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modal-title">New Booking</div>
+      <button class="modal-close" onclick="closeModal('booking-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-2col">
+        <div class="form-row">
+          <label>Section</label>
+          <select id="m-section" onchange="updateSeatOptions()">
+            <option value="A">Section A</option>
+            <option value="B">Section B</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Seat Number</label>
+          <select id="m-seat"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Student Name</label>
+        <input type="text" id="m-name" placeholder="Full name">
+      </div>
+      <div class="form-row">
+        <label>Phone</label>
+        <input type="text" id="m-phone" placeholder="Phone number">
+      </div>
+      <div class="form-row">
+        <label>Slot</label>
+        <select id="m-slot">
+          <option value="Morning">Morning (7 AM – 2 PM) — ₹550</option>
+          <option value="Evening">Evening (2 PM – 9 PM) — ₹550</option>
+          <option value="Full Day">Full Day (7 AM – 9 PM) — ₹900</option>
+        </select>
+      </div>
+      <div class="form-2col">
+        <div class="form-row">
+          <label>Start Date</label>
+          <input type="date" id="m-startdate">
+        </div>
+        <div class="form-row">
+          <label>Amount (₹)</label>
+          <input type="number" id="m-amount" placeholder="e.g. 800">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Payment Status</label>
+        <select id="m-payment">
+          <option value="Paid">Paid</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveBooking()" id="save-btn">Save Booking</button>
+        <button class="btn btn-ghost" onclick="closeModal('booking-modal')">Cancel</button>
+      </div>
+      <input type="hidden" id="m-edit-id">
+    </div>
+  </div>
+</div>
+
+<!-- VIEW BOOKING MODAL -->
+<div class="modal-overlay" id="view-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title">Booking Details</div>
+      <button class="modal-close" onclick="closeModal('view-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="view-modal-body"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== DATA ====================
+const SLOT_FEES = { Morning: 550, Evening: 550, 'Full Day': 900 };
+const SECTION_A_SEATS = 42;
+const SECTION_B_SEATS = 44;
+
+function getBookings() {
+  return JSON.parse(localStorage.getItem('rr_bookings') || '[]');
+}
+function saveBookings(b) {
+  localStorage.setItem('rr_bookings', JSON.stringify(b));
+}
+function getWaiting() {
+  return JSON.parse(localStorage.getItem('rr_waiting') || '[]');
+}
+function saveWaiting(w) {
+  localStorage.setItem('rr_waiting', JSON.stringify(w));
+}
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+}
+function addDays(dateStr, days) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0,10);
+}
+function addMonths(dateStr, months) {
+  const d = new Date(dateStr);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0,10);
+}
+function today() {
+  return new Date().toISOString().slice(0,10);
+}
+function fmtDate(d) {
+  if(!d) return '—';
+  return new Date(d).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+function diffDays(a, b) {
+  return Math.ceil((new Date(b) - new Date(a)) / 86400000);
+}
+
+// ==================== SEAT STATUS ====================
+// Returns: 'available', 'morning', 'evening', 'fullday', 'expired'
+function getSeatStatus(section, seatNum) {
+  const bookings = getBookings();
+  const active = bookings.filter(b =>
+    b.section === section &&
+    b.seat === seatNum &&
+    b.endDate >= today()
+  );
+  if (!active.length) return 'available';
+  const slots = active.map(b => b.slot);
+  if (slots.includes('Full Day')) return 'fullday';
+  const hasMorning = slots.includes('Morning');
+  const hasEvening = slots.includes('Evening');
+  if (hasMorning && hasEvening) return 'fullday';
+  if (hasMorning) return 'morning';
+  if (hasEvening) return 'evening';
+  return 'available';
+}
+
+// Can a seat accept a new booking of given slot?
+function canBook(section, seatNum, slot) {
+  const status = getSeatStatus(section, seatNum);
+  if (status === 'available') return true;
+  if (status === 'fullday') return false;
+  if (slot === 'Full Day') return false;
+  if (status === 'morning' && slot === 'Morning') return false;
+  if (status === 'evening' && slot === 'Evening') return false;
+  if (status === 'morning' && slot === 'Evening') return true;
+  if (status === 'evening' && slot === 'Morning') return true;
+  return false;
+}
+
+// ==================== CURRENT SECTION ====================
+let currentSection = 'A';
+function switchSection(sec) {
+  currentSection = sec;
+  document.getElementById('sec-btn-a').classList.toggle('active', sec === 'A');
+  document.getElementById('sec-btn-b').classList.toggle('active', sec === 'B');
+  document.getElementById('seat-grid-A').style.display = sec === 'A' ? 'grid' : 'none';
+  document.getElementById('seat-grid-B').style.display = sec === 'B' ? 'grid' : 'none';
+}
+
+// ==================== RENDER SEAT GRIDS ====================
+function renderSeatGrid(section) {
+  const count = section === 'A' ? SECTION_A_SEATS : SECTION_B_SEATS;
+  const el = document.getElementById(`seat-grid-${section}`);
+  el.innerHTML = '';
+  for (let i = 1; i <= count; i++) {
+    const status = getSeatStatus(section, i);
+    const cls = {
+      available: 'seat-available',
+      morning: 'seat-morning',
+      evening: 'seat-evening',
+      fullday: 'seat-fullday',
+      expired: 'seat-expired'
+    }[status] || 'seat-available';
+    const slotLabel = {
+      available: 'FREE',
+      morning: 'MORN',
+      evening: 'EVE',
+      fullday: 'FULL',
+      expired: 'EXP'
+    }[status];
+    const btn = document.createElement('button');
+    btn.className = `seat-btn ${cls}`;
+    btn.innerHTML = `<span class="seat-num">${i}</span><span class="seat-slot">${slotLabel}</span>`;
+    btn.onclick = () => openBookingModal(section, i);
+    el.appendChild(btn);
+  }
+}
+
+// ==================== STATS ====================
+function updateStats() {
+  let avail = 0, occ = 0, morn = 0, eve = 0;
+  ['A','B'].forEach(sec => {
+    const count = sec === 'A' ? SECTION_A_SEATS : SECTION_B_SEATS;
+    for (let i = 1; i <= count; i++) {
+      const s = getSeatStatus(sec, i);
+      if (s === 'available') avail++;
+      else if (s === 'fullday') occ++;
+      else if (s === 'morning') morn++;
+      else if (s === 'evening') eve++;
+    }
+  });
+  document.getElementById('stat-available').textContent = avail;
+  document.getElementById('stat-occupied').textContent = occ;
+  document.getElementById('stat-morning').textContent = morn;
+  document.getElementById('stat-evening').textContent = eve;
+}
+
+// ==================== TAB SWITCHING ====================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['seats','bookings','finance'][i] === tab);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  if (tab === 'bookings') renderBookingsTable();
+  if (tab === 'finance') renderFinance();
+}
+
+// ==================== MODAL ====================
+let editingId = null;
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  editingId = null;
+}
+function openBookingModal(section, seatNum) {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'New Booking';
+  document.getElementById('save-btn').textContent = 'Save Booking';
+  document.getElementById('m-edit-id').value = '';
+  document.getElementById('m-name').value = '';
+  document.getElementById('m-phone').value = '';
+  document.getElementById('m-slot').value = 'Morning';
+  document.getElementById('m-amount').value = SLOT_FEES['Morning'];
+  document.getElementById('m-payment').value = 'Paid';
+  const d = new Date().toISOString().slice(0,10);
+  document.getElementById('m-startdate').value = d;
+  document.getElementById('m-section').value = section || 'A';
+  updateSeatOptions(section, seatNum);
+  document.getElementById('booking-modal').classList.add('open');
+}
+
+function updateSeatOptions(forceSection, forceSeat) {
+  const section = forceSection || document.getElementById('m-section').value;
+  const count = section === 'A' ? SECTION_A_SEATS : SECTION_B_SEATS;
+  const slot = document.getElementById('m-slot').value || 'Morning';
+  const sel = document.getElementById('m-seat');
+  sel.innerHTML = '';
+  for (let i = 1; i <= count; i++) {
+    const status = getSeatStatus(section, i);
+    const available = status === 'available' ||
+      (status === 'morning' && slot === 'Evening') ||
+      (status === 'evening' && slot === 'Morning');
+    if (available || (forceSeat === i)) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `Seat ${i}${available ? '' : ' (partial)'}`;
+      if (forceSeat === i) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+  // also update fee
+  const slotSel = document.getElementById('m-slot');
+  if (slotSel) {
+    slotSel.onchange = () => {
+      document.getElementById('m-amount').value = SLOT_FEES[slotSel.value] || '';
+      updateSeatOptions();
+    };
+  }
+}
+
+function saveBooking() {
+  const name = document.getElementById('m-name').value.trim();
+  const phone = document.getElementById('m-phone').value.trim();
+  const section = document.getElementById('m-section').value;
+  const seat = parseInt(document.getElementById('m-seat').value);
+  const slot = document.getElementById('m-slot').value;
+  const startDate = document.getElementById('m-startdate').value;
+  const amount = parseFloat(document.getElementById('m-amount').value) || 0;
+  const payment = document.getElementById('m-payment').value;
+  const editId = document.getElementById('m-edit-id').value;
+
+  if (!name || !startDate || !seat) { showToast('Please fill all required fields', 'error'); return; }
+
+  // Conflict check (skip for edits)
+  if (!editId && !canBook(section, seat, slot)) {
+    showToast(`Seat ${seat} is not available for ${slot} slot`, 'error');
+    return;
+  }
+
+  const endDate = addMonths(startDate, 1);
+  const bookings = getBookings();
+
+  if (editId) {
+    const idx = bookings.findIndex(b => b.id === editId);
+    if (idx !== -1) {
+      bookings[idx] = { ...bookings[idx], name, phone, section, seat, slot, startDate, endDate, amount, payment };
+    }
+    showToast('Booking updated!', 'success');
+  } else {
+    bookings.push({ id: genId(), name, phone, section, seat, slot, startDate, endDate, amount, payment });
+    showToast('Booking saved!', 'success');
+  }
+  saveBookings(bookings);
+  closeModal('booking-modal');
+  renderAll();
+}
+
+// ==================== EDIT BOOKING ====================
+function editBooking(id) {
+  const bookings = getBookings();
+  const b = bookings.find(x => x.id === id);
+  if (!b) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit Booking';
+  document.getElementById('save-btn').textContent = 'Update Booking';
+  document.getElementById('m-edit-id').value = id;
+  document.getElementById('m-name').value = b.name;
+  document.getElementById('m-phone').value = b.phone || '';
+  document.getElementById('m-section').value = b.section;
+  document.getElementById('m-slot').value = b.slot;
+  document.getElementById('m-startdate').value = b.startDate;
+  document.getElementById('m-amount').value = b.amount;
+  document.getElementById('m-payment').value = b.payment;
+  updateSeatOptions(b.section, b.seat);
+  document.getElementById('m-seat').value = b.seat;
+  document.getElementById('booking-modal').classList.add('open');
+}
+
+function deleteBooking(id) {
+  if (!confirm('Delete this booking?')) return;
+  const bookings = getBookings().filter(b => b.id !== id);
+  saveBookings(bookings);
+  showToast('Booking deleted', 'success');
+  renderAll();
+  closeModal('view-modal');
+}
+
+function markPaid(id) {
+  const bookings = getBookings();
+  const idx = bookings.findIndex(b => b.id === id);
+  if (idx !== -1) { bookings[idx].payment = 'Paid'; saveBookings(bookings); }
+  showToast('Marked as Paid', 'success');
+  renderAll();
+  closeModal('view-modal');
+}
+
+// ==================== VIEW BOOKING ====================
+function viewBooking(id) {
+  const bookings = getBookings();
+  const b = bookings.find(x => x.id === id);
+  if (!b) return;
+  const expired = b.endDate < today();
+  const slotColor = { Morning: 'yellow', Evening: 'blue', 'Full Day': 'red' }[b.slot] || 'yellow';
+  document.getElementById('view-modal-body').innerHTML = `
+    <div class="info-grid">
+      <div class="info-item"><div class="lbl">Student</div><div class="val">${b.name}</div></div>
+      <div class="info-item"><div class="lbl">Phone</div><div class="val">${b.phone || '—'}</div></div>
+      <div class="info-item"><div class="lbl">Section / Seat</div><div class="val">Section ${b.section} — Seat ${b.seat}</div></div>
+      <div class="info-item"><div class="lbl">Slot</div><div class="val"><span class="badge ${slotColor}">${b.slot}</span></div></div>
+      <div class="info-item"><div class="lbl">Start Date</div><div class="val">${fmtDate(b.startDate)}</div></div>
+      <div class="info-item"><div class="lbl">End Date</div><div class="val">${fmtDate(b.endDate)}</div></div>
+      <div class="info-item"><div class="lbl">Amount</div><div class="val">₹${b.amount}</div></div>
+      <div class="info-item"><div class="lbl">Status</div><div class="val">
+        <span class="payment-status ${b.payment === 'Paid' ? 'paid' : 'pending'}">
+          ${b.payment === 'Paid' ? '✓' : '⏳'} ${b.payment}
+        </span>
+      </div></div>
+    </div>
+    ${expired ? '<div style="color:var(--red);font-size:12px;margin-bottom:12px;padding:8px;background:rgba(240,90,90,0.1);border-radius:6px;border:1px solid rgba(240,90,90,0.3)">⚠️ This booking has expired</div>' : ''}
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="editBooking('${b.id}');closeModal('view-modal')">✏️ Edit</button>
+      ${b.payment === 'Pending' ? `<button class="btn btn-green btn-sm" onclick="markPaid('${b.id}')">✓ Mark Paid</button>` : ''}
+      ${b.payment === 'Paid' ? `<button class="btn btn-blue btn-sm" onclick="generateReceipt('${b.id}')">🧾 Receipt</button>` : ''}
+      <button class="btn btn-danger btn-sm" onclick="deleteBooking('${b.id}')">🗑 Delete</button>
+    </div>
+  `;
+  document.getElementById('view-modal').classList.add('open');
+}
+
+// ==================== BOOKINGS TABLE ====================
+function renderBookingsTable() {
+  const search = (document.getElementById('search-booking').value || '').toLowerCase();
+  const filterSec = document.getElementById('filter-section').value;
+  const filterSlot = document.getElementById('filter-slot').value;
+  const filterPay = document.getElementById('filter-payment').value;
+  let bookings = getBookings();
+  if (search) bookings = bookings.filter(b => b.name.toLowerCase().includes(search) || String(b.seat).includes(search));
+  if (filterSec) bookings = bookings.filter(b => b.section === filterSec);
+  if (filterSlot) bookings = bookings.filter(b => b.slot === filterSlot);
+  if (filterPay) bookings = bookings.filter(b => b.payment === filterPay);
+  bookings.sort((a,b) => b.startDate.localeCompare(a.startDate));
+
+  const tbody = document.getElementById('bookings-tbody');
+  if (!bookings.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)">No bookings found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = bookings.map(b => {
+    const expired = b.endDate < today();
+    const slotCls = { Morning: 'slot-morning', Evening: 'slot-evening', 'Full Day': 'slot-fullday' }[b.slot] || '';
+    return `<tr>
+      <td>
+        <div style="font-weight:500">${b.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${b.phone || ''}</div>
+      </td>
+      <td><span style="color:var(--text2)">§${b.section}</span> · S${b.seat}</td>
+      <td><span class="${slotCls}">${b.slot}</span></td>
+      <td>
+        <div style="font-size:12px">${fmtDate(b.startDate)}</div>
+        <div style="font-size:11px;color:${expired ? 'var(--red)' : 'var(--text3)'}">→ ${fmtDate(b.endDate)}</div>
+      </td>
+      <td style="font-family:'DM Mono',monospace">₹${b.amount}</td>
+      <td><span class="payment-status ${b.payment === 'Paid' ? 'paid' : 'pending'}">${b.payment === 'Paid' ? '✓' : '⏳'} ${b.payment}</span></td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="viewBooking('${b.id}')">View</button>
+          ${b.payment === 'Paid' ? `<button class="btn btn-blue btn-sm" onclick="generateReceipt('${b.id}')">🧾</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ==================== FINANCE ====================
+function renderFinance() {
+  const bookings = getBookings();
+  const thisMonth = new Date().toISOString().slice(0,7);
+  const monthBookings = bookings.filter(b => b.startDate.startsWith(thisMonth));
+  const totalRev = monthBookings.filter(b => b.payment === 'Paid').reduce((s,b) => s + b.amount, 0);
+  const totalPending = bookings.filter(b => b.payment === 'Pending').reduce((s,b) => s + b.amount, 0);
+  document.getElementById('fin-revenue').textContent = `₹${totalRev.toLocaleString()}`;
+  document.getElementById('fin-pending').textContent = `₹${totalPending.toLocaleString()}`;
+  document.getElementById('fin-total').textContent = bookings.length;
+
+  const slots = ['Morning', 'Evening', 'Full Day'];
+  document.getElementById('finance-breakdown').innerHTML = slots.map(slot => {
+    const sb = bookings.filter(b => b.slot === slot);
+    const rev = sb.filter(b => b.payment === 'Paid').reduce((s,b) => s + b.amount, 0);
+    const pend = sb.filter(b => b.payment === 'Pending').reduce((s,b) => s + b.amount, 0);
+    const slotCls = { Morning: 'slot-morning', Evening: 'slot-evening', 'Full Day': 'slot-fullday' }[slot] || '';
+    return `<tr>
+      <td><span class="${slotCls}">${slot}</span></td>
+      <td>${sb.length}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--green)">₹${rev.toLocaleString()}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--accent)">₹${pend.toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ==================== SIDEBAR ====================
+function renderSidebar() {
+  const bookings = getBookings();
+  const t = today();
+  const in3 = addDays(t, 3);
+  const in7 = addDays(t, 7);
+
+  // Expiry
+  const expiring = bookings.filter(b => b.endDate >= t && b.endDate <= in3).sort((a,b)=>a.endDate.localeCompare(b.endDate));
+  const el = document.getElementById('expiry-list');
+  if (!expiring.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">✅</div>No expiries in next 3 days</div>`;
+  } else {
+    el.innerHTML = expiring.map(b => {
+      const daysLeft = diffDays(t, b.endDate);
+      const cls = daysLeft <= 1 ? 'urgent' : 'warning';
+      return `<div class="expiry-card ${cls}" onclick="viewBooking('${b.id}')" style="cursor:pointer">
+        <div class="name">${b.name}</div>
+        <div class="meta">§${b.section} · S${b.seat} · ${b.slot}</div>
+        <div class="meta" style="color:${cls === 'urgent' ? 'var(--red)' : 'var(--accent)'}">
+          Expires: ${fmtDate(b.endDate)} (${daysLeft === 0 ? 'Today' : daysLeft + 'd'})
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Quick stats
+  const activeBookings = bookings.filter(b => b.endDate >= t).length;
+  const weekExpiry = bookings.filter(b => b.endDate >= t && b.endDate <= in7).length;
+  document.getElementById('qs-active').textContent = activeBookings;
+  document.getElementById('qs-week').textContent = weekExpiry;
+}
+
+function renderWaitingList() {
+  const waiting = getWaiting();
+  const el = document.getElementById('waiting-list');
+  if (!waiting.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">👥</div>No one waiting</div>`;
+    return;
+  }
+  el.innerHTML = waiting.map((w, i) => {
+    const slotColor = { Morning: '#f0b840', Evening: '#5a9cf0', 'Full Day': '#f05a5a' }[w.slot] || 'var(--text2)';
+    return `<div class="waiting-card">
+      <div class="info">
+        <div class="name">${w.name}</div>
+        <div class="meta">${w.phone} · <span style="color:${slotColor}">${w.slot || 'Any'}</span></div>
+      </div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-green btn-sm" title="Book seat" onclick="assignFromWaiting(${i})">+</button>
+        <button class="btn btn-danger btn-sm" onclick="removeWaiting(${i})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addToWaiting() {
+  const name = document.getElementById('w-name').value.trim();
+  const phone = document.getElementById('w-phone').value.trim();
+  const slot = document.getElementById('w-slot').value;
+  if (!name) { showToast('Enter student name', 'error'); return; }
+  const w = getWaiting();
+  w.push({ name, phone, slot });
+  saveWaiting(w);
+  document.getElementById('w-name').value = '';
+  document.getElementById('w-phone').value = '';
+  document.getElementById('w-slot').value = '';
+  showToast('Added to waiting list', 'success');
+  renderWaitingList();
+}
+function removeWaiting(i) {
+  const w = getWaiting();
+  w.splice(i, 1);
+  saveWaiting(w);
+  renderWaitingList();
+}
+function assignFromWaiting(i) {
+  const w = getWaiting();
+  const person = w[i];
+  // Pre-fill booking modal
+  openBookingModal(null, null);
+  document.getElementById('m-name').value = person.name;
+  document.getElementById('m-phone').value = person.phone || '';
+  if (person.slot) {
+    document.getElementById('m-slot').value = person.slot;
+    document.getElementById('m-amount').value = SLOT_FEES[person.slot] || '';
+    updateSeatOptions();
+  }
+  showToast(`Prefilled form for ${person.name}`, 'success');
+}
+
+// ==================== RECEIPT PDF ====================
+function generateReceipt(id) {
+  const bookings = getBookings();
+  const b = bookings.find(x => x.id === id);
+  if (!b || b.payment !== 'Paid') { showToast('Only paid bookings can generate receipts', 'error'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const s = getLibSettings();
+  const libName = (s.name || 'ReadRoom Pro').toUpperCase();
+  const libTagline = s.tagline || 'Professional Library Management System';
+  const libAddress = s.address || '';
+  const libPhone = s.phone || '';
+  const doc = new jsPDF({ unit: 'mm', format: 'a5' });
+  const pw = 148, ph = 210;
+
+  // Background
+  doc.setFillColor(13, 15, 20);
+  doc.rect(0, 0, pw, ph, 'F');
+
+  // Header band
+  doc.setFillColor(240, 184, 64);
+  doc.rect(0, 0, pw, 28, 'F');
+
+  // Library Name
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(libName, pw/2, 12, { align: 'center' });
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(libTagline, pw/2, 19, { align: 'center' });
+  const subLine = [libAddress, libPhone].filter(Boolean).join(' · ');
+  if (subLine) {
+    doc.text(subLine, pw/2, 24, { align: 'center' });
+    doc.text('OFFICIAL PAYMENT RECEIPT', pw/2, 27.5, { align: 'center' });
+  } else {
+    doc.text('OFFICIAL PAYMENT RECEIPT', pw/2, 24.5, { align: 'center' });
+  }
+
+  // Receipt No & Date
+  doc.setTextColor(200, 200, 200);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Receipt ID: ${b.id.toUpperCase()}`, 10, 36);
+  doc.text(`Issued: ${fmtDate(today())}`, pw - 10, 36, { align: 'right' });
+
+  // Divider
+  doc.setDrawColor(42, 47, 63);
+  doc.setLineWidth(0.4);
+  doc.line(10, 40, pw - 10, 40);
+
+  // Student info block
+  const fields = [
+    ['Student Name', b.name],
+    ['Phone', b.phone || '—'],
+    ['Section', `Section ${b.section}`],
+    ['Seat Number', `Seat ${b.seat}`],
+    ['Slot', b.slot],
+    ['Start Date', fmtDate(b.startDate)],
+    ['End Date', fmtDate(b.endDate)],
+    ['Duration', '1 Month'],
+  ];
+  let y = 50;
+  fields.forEach(([label, val]) => {
+    doc.setTextColor(140, 150, 180);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(label, 12, y);
+    doc.setTextColor(232, 234, 240);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text(val, 70, y);
+    y += 11;
+  });
+
+  // Divider
+  doc.setDrawColor(42, 47, 63);
+  doc.line(10, y + 2, pw - 10, y + 2);
+  y += 10;
+
+  // Amount
+  doc.setFillColor(20, 23, 31);
+  doc.roundedRect(10, y, pw - 20, 22, 3, 3, 'F');
+  doc.setTextColor(140, 150, 180);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('AMOUNT PAID', 20, y + 8);
+  doc.setTextColor(240, 184, 64);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`INR ${b.amount.toLocaleString()}`, 20, y + 18);
+  y += 30;
+
+  // PAID STAMP
+  doc.setDrawColor(63, 207, 142);
+  doc.setLineWidth(1.5);
+  doc.roundedRect(pw/2 - 22, y - 2, 44, 16, 2, 2);
+  doc.setTextColor(63, 207, 142);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('✓  PAID', pw/2, y + 9, { align: 'center' });
+  y += 24;
+
+  // Footer
+  doc.setTextColor(92, 98, 128);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.text('This is a computer-generated receipt and does not require a signature.', pw/2, y + 4, { align: 'center' });
+  doc.text('Thank you for choosing ReadRoom Pro!', pw/2, y + 9, { align: 'center' });
+
+  doc.save(`Receipt_${b.name.replace(/\s+/g,'_')}_Seat${b.seat}.pdf`);
+  showToast('Receipt downloaded!', 'success');
+}
+
+// ==================== TOAST ====================
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ==================== RENDER ALL ====================
+function renderAll() {
+  renderSeatGrid('A');
+  renderSeatGrid('B');
+  updateStats();
+  renderBookingsTable();
+  renderSidebar();
+  renderWaitingList();
+  renderFinance();
+}
+
+// ==================== SETTINGS ====================
+function getLibSettings() {
+  return JSON.parse(localStorage.getItem('rr_settings') || '{}');
+}
+function saveLibSettings(s) {
+  localStorage.setItem('rr_settings', JSON.stringify(s));
+}
+function applyLibSettings() {
+  const s = getLibSettings();
+  const name = s.name || 'ReadRoom';
+  const tagline = s.tagline || 'Pro — Library Management';
+  document.getElementById('header-logo').childNodes[0].textContent = name + ' ';
+  document.getElementById('header-sub').textContent = tagline;
+  document.title = name + ' — Library Management';
+}
+function openSettings() {
+  const s = getLibSettings();
+  document.getElementById('s-lib-name').value = s.name || '';
+  document.getElementById('s-lib-tagline').value = s.tagline || '';
+  document.getElementById('s-lib-address').value = s.address || '';
+  document.getElementById('s-lib-phone').value = s.phone || '';
+  document.getElementById('settings-modal').classList.add('open');
+}
+function saveSettings() {
+  const s = {
+    name: document.getElementById('s-lib-name').value.trim() || 'ReadRoom',
+    tagline: document.getElementById('s-lib-tagline').value.trim() || 'Pro — Library Management',
+    address: document.getElementById('s-lib-address').value.trim(),
+    phone: document.getElementById('s-lib-phone').value.trim(),
+  };
+  saveLibSettings(s);
+  applyLibSettings();
+  closeModal('settings-modal');
+  showToast('Settings saved!', 'success');
+}
+
+// ==================== HEADER DATE ====================
+function updateHeaderDate() {
+  const d = new Date();
+  document.getElementById('header-date').textContent =
+    d.toLocaleDateString('en-IN', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+}
+
+// ==================== INIT ====================
+updateHeaderDate();
+setInterval(updateHeaderDate, 60000);
+applyLibSettings();
+renderAll();
+
+// Set today's date as default for booking modal
+document.getElementById('m-startdate').value = today();
+
+// Pre-populate sample data if empty
+if (!getBookings().length) {
+  const samples = [
+    { id: genId(), name: 'Rahul Sharma', phone: '9876543210', section: 'A', seat: 1, slot: 'Morning', startDate: addDays(today(), -25), endDate: addDays(today(), 5), amount: 550, payment: 'Paid' },
+    { id: genId(), name: 'Priya Patel', phone: '9123456789', section: 'A', seat: 2, slot: 'Full Day', startDate: addDays(today(), -20), endDate: addDays(today(), 10), amount: 900, payment: 'Paid' },
+    { id: genId(), name: 'Amit Kumar', phone: '9988776655', section: 'A', seat: 3, slot: 'Evening', startDate: addDays(today(), -15), endDate: addDays(today(), 15), amount: 550, payment: 'Pending' },
+    { id: genId(), name: 'Sunita Devi', phone: '9001122334', section: 'B', seat: 5, slot: 'Morning', startDate: addDays(today(), -28), endDate: addDays(today(), 2), amount: 550, payment: 'Paid' },
+    { id: genId(), name: 'Vikram Singh', phone: '9445566778', section: 'B', seat: 7, slot: 'Full Day', startDate: addDays(today(), -10), endDate: addDays(today(), 20), amount: 900, payment: 'Paid' },
+    { id: genId(), name: 'Meena Joshi', phone: '9334455667', section: 'A', seat: 5, slot: 'Morning', startDate: addDays(today(), -29), endDate: addDays(today(), 1), amount: 550, payment: 'Pending' },
+  ];
+  saveBookings(samples);
+  renderAll();
+}
+</script>
+</body>
+</html>
