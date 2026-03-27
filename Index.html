@@ -1,0 +1,4085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReadRoom Pro — Library Management</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --surface: #fffdf8;
+    --surface2: #f7f2e9;
+    --surface3: #ede8dc;
+    --border: #e2dace;
+    --border2: #d4ccbc;
+    --text: #1e1a14;
+    --text2: #6b6253;
+    --text3: #a8997f;
+    --accent: #c8820a;
+    --accent2: #a86a06;
+    --green: #1e8a52;
+    --red: #c0392b;
+    --blue: #2464a8;
+    --purple: #7c4dba;
+    --orange: #d4641a;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow-sm: 0 1px 4px rgba(60,40,10,0.07);
+    --shadow-md: 0 4px 16px rgba(60,40,10,0.1);
+    --shadow-lg: 0 12px 40px rgba(60,40,10,0.13);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    background-image: 
+      radial-gradient(ellipse at 10% 20%, rgba(200,130,10,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 80%, rgba(36,100,168,0.03) 0%, transparent 50%);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--text2); font-weight: 400; font-size: 14px; margin-left: 8px; font-family: 'DM Sans', sans-serif; }
+  .header-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text3);
+    background: var(--surface2);
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 0;
+    min-height: calc(100vh - 64px);
+  }
+  .main-panel { border-right: 1px solid var(--border); overflow-y: auto; }
+  .side-panel { overflow-y: auto; background: var(--surface); border-left: 1px solid var(--border); }
+
+  /* NAV TABS — upgraded */
+  .nav-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 12px;
+    border-bottom: 2px solid var(--border);
+    background: var(--surface);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    padding: 12px 14px 10px;
+    border: none;
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tab-btn .tab-icon { font-size: 20px; line-height: 1; }
+  .tab-btn .tab-label { font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .tab-btn:hover:not(.active) { color: var(--text2); background: var(--surface2); }
+
+  /* CONTENT */
+  .tab-content { display: none; padding: 20px; }
+  .tab-content.active { display: block; }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+  .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .stat-value { font-size: 26px; font-weight: 600; font-family: 'DM Mono', monospace; }
+  .stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .stat-card.green .stat-value { color: var(--green); }
+  .stat-card.red .stat-value { color: var(--red); }
+  .stat-card.yellow .stat-value { color: var(--accent); }
+  .stat-card.blue .stat-value { color: var(--blue); }
+
+  /* SECTION HEADER */
+  .section-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .badge {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid;
+  }
+  .badge.green { color: var(--green); border-color: rgba(30,138,82,0.4); background: rgba(30,138,82,0.08); }
+  .badge.yellow { color: var(--accent); border-color: rgba(200,130,10,0.4); background: rgba(200,130,10,0.08); }
+  .badge.red { color: var(--red); border-color: rgba(192,57,43,0.4); background: rgba(192,57,43,0.08); }
+  .badge.blue { color: var(--blue); border-color: rgba(36,100,168,0.4); background: rgba(36,100,168,0.08); }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+  }
+
+  /* SEAT GRID */
+  .seat-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .seat-btn {
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    transition: all 0.15s;
+    position: relative;
+    min-height: 52px;
+  }
+  .seat-btn:hover { transform: scale(1.06); z-index: 2; }
+  .seat-num { font-size: 13px; font-weight: 600; }
+  .seat-slot { font-size: 9px; margin-top: 2px; opacity: 0.8; }
+
+  .seat-available {
+    background: rgba(30,138,82,0.07);
+    border-color: rgba(30,138,82,0.35);
+    color: var(--green);
+  }
+  .seat-morning {
+    background: rgba(200,130,10,0.09);
+    border-color: rgba(200,130,10,0.4);
+    color: var(--accent);
+  }
+  .seat-evening {
+    background: rgba(36,100,168,0.08);
+    border-color: rgba(36,100,168,0.35);
+    color: var(--blue);
+  }
+  .seat-fullday {
+    background: rgba(192,57,43,0.08);
+    border-color: rgba(192,57,43,0.4);
+    color: var(--red);
+  }
+  .seat-expired {
+    background: rgba(168,153,127,0.10);
+    border-color: rgba(168,153,127,0.3);
+    color: var(--text3);
+    cursor: default;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(120,90,40,0.35);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 480px;
+    max-width: 95vw;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+  }
+  .modal-hdr {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .modal-close {
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-close:hover { background: var(--surface2); color: var(--text); }
+  .modal-body { padding: 20px 24px; }
+
+  /* FORM */
+  .form-row { margin-bottom: 16px; }
+  .form-row label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .form-row input, .form-row select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-row input:focus, .form-row select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,130,10,0.12); }
+  .form-row select option { background: var(--surface); color: var(--text); }
+  .form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(200,130,10,0.25); }
+  .btn-primary:hover { background: var(--accent2); box-shadow: 0 4px 12px rgba(200,130,10,0.35); transform: translateY(-1px); }
+  .btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border2); background: var(--surface3); }
+  .btn-danger { background: rgba(192,57,43,0.08); color: var(--red); border: 1px solid rgba(192,57,43,0.25); }
+  .btn-danger:hover { background: rgba(192,57,43,0.15); }
+  .btn-green { background: rgba(30,138,82,0.09); color: var(--green); border: 1px solid rgba(30,138,82,0.25); }
+  .btn-green:hover { background: rgba(30,138,82,0.18); }
+  .btn-blue { background: rgba(36,100,168,0.09); color: var(--blue); border: 1px solid rgba(36,100,168,0.25); }
+  .btn-blue:hover { background: rgba(36,100,168,0.18); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-row { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+
+  /* FINANCE RANGE BUTTONS */
+  .fin-range-btn {
+    font-size: 12px !important;
+    padding: 5px 12px !important;
+    border-radius: 20px !important;
+    border: 1px solid var(--border2) !important;
+    background: var(--surface2) !important;
+    color: var(--text2) !important;
+    transition: all 0.15s;
+  }
+  .fin-range-btn.active {
+    background: var(--accent) !important;
+    color: #fff !important;
+    border-color: var(--accent) !important;
+    font-weight: 600 !important;
+  }
+  .fin-range-btn:hover:not(.active) {
+    background: var(--surface3) !important;
+    color: var(--text) !important;
+  }
+
+  /* INFO GRID in modal */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  .info-item .lbl { font-size: 11px; color: var(--text3); margin-bottom: 3px; }
+  .info-item .val { font-size: 14px; font-weight: 500; }
+
+  /* PAYMENT STATUS */
+  .payment-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .payment-status.paid { background: rgba(30,138,82,0.10); color: var(--green); }
+  .payment-status.pending { background: rgba(200,130,10,0.10); color: var(--accent); }
+
+  /* BOOKINGS TABLE */
+  .bookings-table { width: 100%; border-collapse: collapse; }
+  .bookings-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .bookings-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .sort-arrow {
+    font-size: 10px;
+    color: var(--accent);
+    margin-left: 3px;
+  }
+  .bookings-table th:hover:not(:last-child) {
+    color: var(--accent);
+    background: var(--surface3);
+  }
+  .bookings-table th.sort-active {
+    color: var(--accent);
+  }
+  .bookings-table tr:last-child td { border-bottom: none; }
+  .tbl-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* SIDEBAR */
+  .side-section { padding: 16px; border-bottom: 1px solid var(--border); }
+  .side-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text3);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .side-section-title .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+
+  /* EXPIRY CARDS */
+  .expiry-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    box-shadow: var(--shadow-sm);
+  }
+  .expiry-card .name { font-size: 13px; font-weight: 500; }
+  .expiry-card .meta { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .expiry-card.urgent { border-color: rgba(192,57,43,0.35); background: rgba(192,57,43,0.04); }
+  .expiry-card.warning { border-color: rgba(200,130,10,0.35); background: rgba(200,130,10,0.04); }
+
+  .waiting-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    box-shadow: var(--shadow-sm);
+  }
+  .waiting-card .info .name { font-size: 13px; font-weight: 500; }
+  .waiting-card .info .meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* FINANCE */
+  .finance-card {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow-sm);
+  }
+  .finance-card .fc-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; }
+  .finance-card .fc-value { font-size: 22px; font-weight: 700; font-family: 'DM Mono', monospace; margin-top: 4px; }
+
+  /* WAITING LIST FORM (compact) */
+  .compact-form {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .compact-form input, .compact-form select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    margin-bottom: 8px;
+  }
+  .compact-form input:last-of-type, .compact-form select:last-of-type { margin-bottom: 0; }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 32px 16px; color: var(--text3); font-size: 13px; }
+  .empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+  /* SECTION SWITCH TABS */
+  .section-switch {
+    display: flex;
+    gap: 4px;
+    background: var(--surface2);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    width: fit-content;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .section-switch button {
+    padding: 7px 16px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .section-switch button.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(200,130,10,0.25);
+  }
+
+  /* FILTERS */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-row input, .filter-row select {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 7px 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    box-shadow: var(--shadow-sm);
+  }
+  .filter-row input { flex: 1; min-width: 160px; }
+
+  /* HISTORY TABLE */
+  .history-badge {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+    color: var(--text3);
+    background: var(--surface2);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Receipt stamp */
+  .receipt-stamp {
+    display: inline-block;
+    border: 3px solid var(--green);
+    color: var(--green);
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 4px;
+    padding: 6px 16px;
+    border-radius: 6px;
+    transform: rotate(-8deg);
+    opacity: 0.85;
+  }
+  .overdue-card {
+    background: rgba(192,57,43,0.04);
+    border: 1px solid rgba(192,57,43,0.25);
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .overdue-card .name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .overdue-card .meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .overdue-card .days-over { font-size: 12px; font-weight: 700; color: var(--red); font-family: 'DM Mono', monospace; white-space:nowrap; }
+
+  /* RENEWAL MODAL special */
+  .renewal-info {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .renewal-info strong { color: var(--accent); }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--surface2); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  /* Slot colors in tables */
+  .slot-morning { color: var(--accent); }
+  .slot-evening { color: var(--blue); }
+  .slot-fullday { color: var(--red); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 999;
+    display: none;
+    box-shadow: var(--shadow-lg);
+    animation: slideIn 0.3s ease;
+    max-width: 320px;
+  }
+  .toast.show { display: block; }
+  .toast.success { border-color: rgba(30,138,82,0.4); color: var(--green); background: rgba(30,138,82,0.04); }
+  .toast.error { border-color: rgba(192,57,43,0.4); color: var(--red); background: rgba(192,57,43,0.04); }
+  @keyframes slideIn {
+    from { transform: translateY(16px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .fin-stats-row { grid-template-columns: repeat(5, 1fr) !important; }
+
+  /* ===== DARK MODE ===== */
+  body.dark-mode {
+    --bg: #1a1610;
+    --surface: #231f18;
+    --surface2: #2c2820;
+    --surface3: #362f24;
+    --border: #3d3628;
+    --border2: #4a4030;
+    --text: #f0e8d8;
+    --text2: #b8a888;
+    --text3: #7a6e58;
+    --accent: #e09a20;
+    --accent2: #c8820a;
+  }
+  body.dark-mode .header { box-shadow: 0 1px 8px rgba(0,0,0,0.4); }
+  body.dark-mode .modal { box-shadow: 0 12px 48px rgba(0,0,0,0.5); }
+  body.dark-mode .stat-card { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  body.dark-mode .tbl-wrap { box-shadow: none; }
+  body.dark-mode input, body.dark-mode select { color-scheme: dark; }
+
+  /* Dark mode toggle button */
+  .dark-toggle {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 17px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .dark-toggle:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
+
+  /* ===== SEAT TOOLTIP ===== */
+  .seat-btn { position: relative; }
+  .seat-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: var(--surface);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 9px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 50;
+    max-width: 160px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.4;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .seat-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--text);
+  }
+  .seat-btn:hover .seat-tooltip { opacity: 1; }
+
+  /* ===== RESPONSIVE / MOBILE ===== */
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .side-panel { border-top: 1px solid var(--border); border-left: none; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .seat-grid { grid-template-columns: repeat(6, 1fr); }
+  }
+
+  @media (max-width: 600px) {
+    /* Header */
+    .header { padding: 0 14px; height: 56px; }
+    .logo { font-size: 17px; }
+    .logo span { display: none; }
+    .header-date { font-size: 11px; padding: 4px 8px; }
+
+    /* Nav tabs — icon only on very small screens */
+    .tab-btn { padding: 10px 10px 8px; }
+    .tab-btn .tab-label { font-size: 10px; }
+
+    /* Stats */
+    .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat-value { font-size: 20px; }
+
+    /* Seat grid */
+    .seat-grid { grid-template-columns: repeat(5, 1fr); gap: 5px; }
+    .seat-btn { min-height: 44px; }
+    .seat-num { font-size: 11px; }
+    .seat-slot { font-size: 8px; }
+
+    /* Tables — horizontal scroll */
+    .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .bookings-table { min-width: 600px; }
+    .bookings-table th, .bookings-table td { padding: 8px 8px; font-size: 12px; }
+
+    /* Tab content padding */
+    .tab-content { padding: 12px; }
+
+    /* Modal full screen on mobile */
+    .modal { width: 100% !important; max-width: 100vw !important; max-height: 100vh !important;
+      border-radius: 16px 16px 0 0; position: fixed; bottom: 0; left: 0; right: 0; margin: 0; }
+    .modal-overlay { align-items: flex-end; }
+
+    /* Form layout */
+    .form-2col { grid-template-columns: 1fr; gap: 0; }
+
+    /* Section switch */
+    .section-switch { width: 100%; }
+    .section-switch button { flex: 1; font-size: 12px; padding: 6px 8px; }
+
+    /* Finance 5-card grid */
+    .fin-stats-row { grid-template-columns: repeat(2, 1fr) !important; }
+
+    /* Filter row */
+    .filter-row { gap: 6px; }
+    .filter-row input, .filter-row select { font-size: 12px; padding: 6px 8px; }
+
+    /* Overdue summary cards */
+    #overdue-summary .stats-row { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    #overdue-summary .stat-value { font-size: 16px; }
+
+    /* Buttons */
+    .btn { padding: 8px 12px; font-size: 12px; }
+    .btn-row { gap: 6px; }
+
+    /* Toast */
+    .toast { bottom: 12px; right: 12px; left: 12px; max-width: 100%; }
+
+    /* Lock screen */
+    #pattern-lock-screen > div { padding: 20px 16px 18px; width: 100%; border-radius: 16px; }
+  }
+
+  @media (max-width: 380px) {
+    .seat-grid { grid-template-columns: repeat(4, 1fr); }
+    .tab-btn .tab-label { display: none; }
+    .tab-btn { padding: 12px 10px; }
+    .tab-btn .tab-icon { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PATTERN / PIN LOCK SCREEN -->
+<div id="pattern-lock-screen" style="display:none;position:fixed;inset:0;z-index:99999;background:#f5f0e8;align-items:center;justify-content:center;flex-direction:column;gap:0">
+  <div style="background:#fffdf8;border-radius:24px;box-shadow:0 8px 40px rgba(80,50,10,0.15);border:1px solid #e2d9c8;padding:28px 28px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;width:340px;max-width:94vw">
+
+    <!-- Logo -->
+    <div style="font-family:'Playfair Display',serif;font-size:22px;color:#c8820a;font-weight:700;text-align:center;letter-spacing:-0.5px">📚 विद्यार्जन LIBRARY</div>
+
+    <!-- Tab switcher -->
+    <div style="display:flex;background:#f0ebe0;border-radius:10px;padding:4px;gap:4px;width:100%">
+      <button id="lock-tab-pattern" onclick="switchLockTab('pattern')"
+        style="flex:1;padding:8px;border:none;border-radius:7px;background:#c8820a;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s">
+        🔷 Pattern
+      </button>
+      <button id="lock-tab-pin" onclick="switchLockTab('pin')"
+        style="flex:1;padding:8px;border:none;border-radius:7px;background:transparent;color:#a89070;font-weight:600;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s">
+        🔢 PIN
+      </button>
+    </div>
+
+    <!-- Status message (shared) -->
+    <div id="lock-status" style="font-size:13px;color:#a89070;min-height:18px;text-align:center;transition:color 0.2s;font-weight:500"></div>
+
+    <!-- ===== PATTERN PANEL ===== -->
+    <div id="lock-panel-pattern" style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%">
+      <div style="font-size:12px;color:#b8a080;text-align:center">Pattern draw karke login karein</div>
+      <!-- Dots trail -->
+      <div id="pattern-display" style="display:flex;gap:6px;min-height:16px;align-items:center;flex-wrap:wrap;justify-content:center"></div>
+      <!-- 3x3 Grid -->
+      <div id="pattern-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:18px;background:#f7f0e2;border-radius:16px;border:1px solid #e2d9c8;touch-action:none;user-select:none;-webkit-user-select:none"></div>
+      <button id="pattern-clear-btn" onclick="clearPattern()" style="font-size:12px;color:#a89070;background:none;border:none;cursor:pointer;text-decoration:underline;display:none">Clear</button>
+    </div>
+
+    <!-- ===== PIN PANEL ===== -->
+    <div id="lock-panel-pin" style="display:none;flex-direction:column;align-items:center;gap:14px;width:100%">
+      <div style="font-size:12px;color:#b8a080;text-align:center">4-digit PIN enter karein</div>
+
+      <!-- PIN dots display -->
+      <div id="pin-dots-display" style="display:flex;gap:12px;justify-content:center;margin:4px 0">
+        <div class="pin-dot" id="pd0"></div>
+        <div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div>
+        <div class="pin-dot" id="pd3"></div>
+      </div>
+
+      <!-- Numpad -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%">
+        <button class="pin-btn" onclick="pinInput('1')">1</button>
+        <button class="pin-btn" onclick="pinInput('2')">2</button>
+        <button class="pin-btn" onclick="pinInput('3')">3</button>
+        <button class="pin-btn" onclick="pinInput('4')">4</button>
+        <button class="pin-btn" onclick="pinInput('5')">5</button>
+        <button class="pin-btn" onclick="pinInput('6')">6</button>
+        <button class="pin-btn" onclick="pinInput('7')">7</button>
+        <button class="pin-btn" onclick="pinInput('8')">8</button>
+        <button class="pin-btn" onclick="pinInput('9')">9</button>
+        <button class="pin-btn pin-btn-clear" onclick="pinClear()" style="font-size:11px;color:#c0392b">Clear</button>
+        <button class="pin-btn" onclick="pinInput('0')">0</button>
+        <button class="pin-btn pin-btn-del" onclick="pinDelete()">⌫</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  /* PATTERN dots */
+  .pdot {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: #fffdf8;
+    border: 2.5px solid #d9ceba;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .pdot .inner { width:14px;height:14px;border-radius:50%;background:#d9ceba;transition:all 0.15s; }
+  .pdot.selected { border-color:#c8820a;background:rgba(200,130,10,0.08); }
+  .pdot.selected .inner { background:#c8820a;transform:scale(1.2); }
+  .pdot.error { border-color:#c0392b !important;background:rgba(192,57,43,0.08) !important; }
+  .pdot.error .inner { background:#c0392b !important; }
+  .pattern-dot-num { position:absolute;top:2px;right:4px;font-size:9px;color:#c8820a;font-weight:700;opacity:0;transition:opacity 0.1s; }
+  .pdot.selected .pattern-dot-num { opacity:1; }
+
+  /* PIN dots */
+  .pin-dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2.5px solid #d9ceba;
+    background: transparent;
+    transition: all 0.15s;
+  }
+  .pin-dot.filled { background: #c8820a; border-color: #c8820a; transform: scale(1.1); }
+  .pin-dot.error  { background: #c0392b !important; border-color: #c0392b !important; }
+  .pin-dot.success{ background: #1e8a52 !important; border-color: #1e8a52 !important; }
+
+  /* PIN numpad buttons */
+  .pin-btn {
+    padding: 16px 8px;
+    border-radius: 12px;
+    border: 1.5px solid #e2d9c8;
+    background: #fffdf8;
+    color: #2a1f0f;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    transition: all 0.12s;
+    box-shadow: 0 2px 6px rgba(80,50,10,0.07);
+    text-align: center;
+  }
+  .pin-btn:active { background:#f0ebe0;transform:scale(0.94);box-shadow:none; }
+  .pin-btn:hover  { background:#fdf6e8;border-color:#c8820a; }
+  .pin-btn-clear  { background:#fff0ee;border-color:rgba(192,57,43,0.3);font-size:12px;font-weight:600; }
+  .pin-btn-del    { background:#f7f0e2;font-size:18px; }
+</style>
+
+<!-- FIREBASE LOADING SCREEN -->
+<div id="firebase-loading" style="display:flex;position:fixed;inset:0;z-index:9999;background:#f5f0e8;align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <div style="font-family:'Playfair Display',serif;font-size:28px;color:#c8820a;font-weight:700">विद्यार्जन LIBRARY</div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <div style="width:8px;height:8px;border-radius:50%;background:#c8820a;animation:pulse 1s infinite 0s"></div>
+    <div style="width:8px;height:8px;border-radius:50%;background:#c8820a;animation:pulse 1s infinite 0.2s"></div>
+    <div style="width:8px;height:8px;border-radius:50%;background:#c8820a;animation:pulse 1s infinite 0.4s"></div>
+  </div>
+  <div style="font-size:13px;color:#a8997f;font-family:'DM Sans',sans-serif">Connecting to Firebase…</div>
+  <style>
+    @keyframes pulse { 0%,100%{opacity:0.2;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
+  </style>
+</div>
+
+<!-- FIREBASE ERROR SCREEN -->
+<div id="firebase-error" style="display:none;position:fixed;inset:0;z-index:9998;background:#f5f0e8;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:24px;text-align:center">
+  <div style="font-size:40px">🔥</div>
+  <div style="font-family:'Playfair Display',serif;font-size:22px;color:#c0392b">Firebase Connection Failed</div>
+  <div style="font-size:13px;color:#6b6253;max-width:420px;line-height:1.7">
+    Please check that you have pasted your correct <strong style="color:#c8820a">Firebase config</strong> values inside the <code style="background:#ede8dc;padding:2px 6px;border-radius:4px">firebaseConfig</code> object in the HTML file.<br><br>
+    Also make sure <strong style="color:#c8820a">Firestore is enabled</strong> in your Firebase Console (in Test Mode).
+  </div>
+  <button onclick="location.reload()" style="background:#c8820a;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px">🔄 Retry</button>
+</div>
+
+<header class="header">
+  <div class="logo" id="header-logo">ReadRoom <span id="header-sub">Pro — Library Management</span></div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="header-date" id="header-date"></div>
+    <button class="dark-toggle" id="dark-toggle-btn" onclick="toggleDarkMode()" title="Dark / Light Mode">🌙</button>
+    <button class="btn btn-ghost btn-sm" onclick="openSettings()" title="Library Settings" style="font-size:15px;padding:6px 10px">⚙️</button>
+  </div>
+</header>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal" style="width:420px">
+    <div class="modal-hdr">
+      <div class="modal-title">⚙️ Library Settings</div>
+      <button class="modal-close" onclick="closeModal('settings-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Library / Reading Room Name</label>
+        <input type="text" id="s-lib-name" placeholder="e.g. Sunrise Reading Room">
+      </div>
+      <div class="form-row">
+        <label>Tagline / Sub-title</label>
+        <input type="text" id="s-lib-tagline" placeholder="e.g. Your Study Destination">
+      </div>
+      <div class="form-row">
+        <label>Address</label>
+        <input type="text" id="s-lib-address" placeholder="e.g. Near Bus Stand, Barmer, Rajasthan">
+      </div>
+      <div class="form-row">
+        <label>Contact Phone</label>
+        <input type="text" id="s-lib-phone" placeholder="e.g. 9876543210">
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;padding:8px 10px;background:rgba(200,130,10,0.06);border-radius:6px;border:1px solid rgba(200,130,10,0.2)">
+        ℹ️ Name &amp; address will also appear on all PDF receipts automatically.
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveSettings()">💾 Save Changes</button>
+        <button class="btn btn-ghost" onclick="closeModal('settings-modal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- MAIN -->
+  <div class="main-panel">
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('seats')"><span class="tab-icon">🪑</span><span class="tab-label">Seats</span></button>
+      <button class="tab-btn" onclick="switchTab('bookings')"><span class="tab-icon">📋</span><span class="tab-label">Bookings</span></button>
+      <button class="tab-btn" onclick="switchTab('finance')"><span class="tab-icon">💰</span><span class="tab-label">Finance</span></button>
+      <button class="tab-btn" onclick="switchTab('overdue')"><span class="tab-icon">⚠️</span><span class="tab-label">Overdue</span></button>
+      <button class="tab-btn" onclick="switchTab('vip')"><span class="tab-icon">⭐</span><span class="tab-label">VIP</span></button>
+      <button class="tab-btn" onclick="switchTab('demo')"><span class="tab-icon">🎯</span><span class="tab-label">Demo</span></button>
+      <button class="tab-btn" onclick="switchTab('history')"><span class="tab-icon">🗂</span><span class="tab-label">History</span></button>
+    </div>
+
+    <!-- SEATS TAB -->
+    <div class="tab-content active" id="tab-seats">
+      <div class="stats-row">
+        <div class="stat-card green">
+          <div class="stat-label">Available</div>
+          <div class="stat-value" id="stat-available">—</div>
+          <div class="stat-sub">seats free</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Occupied</div>
+          <div class="stat-value" id="stat-occupied">—</div>
+          <div class="stat-sub">full day</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">Morning</div>
+          <div class="stat-value" id="stat-morning">—</div>
+          <div class="stat-sub">7am–2pm</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Evening</div>
+          <div class="stat-value" id="stat-evening">—</div>
+          <div class="stat-sub">2pm–9pm</div>
+        </div>
+      </div>
+
+      <div class="section-switch">
+        <button class="active" id="sec-btn-a" onclick="switchSection('A')">Section A — 42 Seats</button>
+        <button id="sec-btn-b" onclick="switchSection('B')">Section B — 44 Seats</button>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(30,138,82,0.6)"></div>Available</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(200,130,10,0.6)"></div>Morning Only</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(36,100,168,0.6)"></div>Evening Only</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(192,57,43,0.6)"></div>Full Day</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(168,153,127,0.5)"></div>Expired</div>
+      </div>
+
+      <div class="seat-grid" id="seat-grid-A"></div>
+      <div class="seat-grid" id="seat-grid-B" style="display:none"></div>
+    </div>
+
+    <!-- BOOKINGS TAB -->
+    <div class="tab-content" id="tab-bookings">
+      <div class="section-hdr">
+        <div class="section-title">All Bookings</div>
+        <button class="btn btn-primary btn-sm" onclick="openBookingModal(null,null)">+ New Booking</button>
+      </div>
+      <div class="filter-row">
+        <input type="text" id="search-booking" placeholder="Search by name or seat…" oninput="renderBookingsTable()">
+        <select id="filter-section" onchange="renderBookingsTable()">
+          <option value="">All Sections</option>
+          <option value="A">Section A</option>
+          <option value="B">Section B</option>
+        </select>
+        <select id="filter-slot" onchange="renderBookingsTable()">
+          <option value="">All Slots</option>
+          <option value="Morning">Morning</option>
+          <option value="Evening">Evening</option>
+          <option value="Full Day">Full Day</option>
+        </select>
+        <select id="filter-payment" onchange="renderBookingsTable()">
+          <option value="">All Payments</option>
+          <option value="Paid">Paid</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+      <div class="tbl-wrap">
+        <table class="bookings-table" id="bookings-table">
+          <thead>
+            <tr>
+              <th style="width:40px">#</th>
+              <th onclick="sortBookings('name')" style="cursor:pointer;user-select:none" id="th-name">Student <span class="sort-arrow" id="arr-name"></span></th>
+              <th onclick="sortBookings('seat')" style="cursor:pointer;user-select:none" id="th-seat">Section / Seat <span class="sort-arrow" id="arr-seat"></span></th>
+              <th onclick="sortBookings('slot')" style="cursor:pointer;user-select:none" id="th-slot">Slot <span class="sort-arrow" id="arr-slot"></span></th>
+              <th onclick="sortBookings('endDate')" style="cursor:pointer;user-select:none" id="th-endDate">Period <span class="sort-arrow" id="arr-endDate">↓</span></th>
+              <th onclick="sortBookings('amount')" style="cursor:pointer;user-select:none" id="th-amount">Amount <span class="sort-arrow" id="arr-amount"></span></th>
+              <th onclick="sortBookings('payment')" style="cursor:pointer;user-select:none" id="th-payment">Status <span class="sort-arrow" id="arr-payment"></span></th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bookings-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FINANCE TAB -->
+    <div class="tab-content" id="tab-finance">
+      <div class="section-hdr" style="margin-bottom:14px">
+        <div class="section-title">Finance Dashboard</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm fin-range-btn active" onclick="setFinRange('thisMonth')">This Month</button>
+          <button class="btn btn-ghost btn-sm fin-range-btn" onclick="setFinRange('lastMonth')">Last Month</button>
+          <button class="btn btn-ghost btn-sm fin-range-btn" onclick="setFinRange('last3')">Last 3 Months</button>
+          <button class="btn btn-ghost btn-sm fin-range-btn" onclick="setFinRange('thisYear')">This Year</button>
+          <button class="btn btn-ghost btn-sm fin-range-btn" onclick="setFinRange('custom')">Custom</button>
+        </div>
+      </div>
+
+      <!-- Custom date range (hidden by default) -->
+      <div id="fin-custom-range" style="display:none;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm)">
+        <span style="font-size:12px;font-weight:600;color:var(--text2)">From:</span>
+        <input type="date" id="fin-from" onchange="renderFinance()" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none">
+        <span style="font-size:12px;font-weight:600;color:var(--text2)">To:</span>
+        <input type="date" id="fin-to" onchange="renderFinance()" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:7px 10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none">
+        <span id="fin-range-label" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace"></span>
+      </div>
+
+      <!-- Selected range label -->
+      <div id="fin-period-label" style="font-size:12px;color:var(--text3);margin-bottom:14px;padding:6px 12px;background:rgba(200,130,10,0.06);border-radius:6px;border:1px solid rgba(200,130,10,0.2);display:inline-block"></div>
+
+      <!-- Summary stat cards -->
+      <div class="stats-row fin-stats-row" style="margin-top:10px">
+        <div class="stat-card green">
+          <div class="stat-label">Revenue</div>
+          <div class="stat-value" id="fin-revenue">₹0</div>
+          <div class="stat-sub" id="fin-rev-sub">paid bookings</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">Pending Dues</div>
+          <div class="stat-value" id="fin-pending">₹0</div>
+          <div class="stat-sub">unpaid</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Expenses</div>
+          <div class="stat-value" id="fin-expenses">₹0</div>
+          <div class="stat-sub" id="fin-exp-sub">total spent</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Net Profit / Loss</div>
+          <div class="stat-value" id="fin-profit">₹0</div>
+          <div class="stat-sub" id="fin-profit-sub">revenue − expenses</div>
+        </div>
+        <div class="stat-card" style="border-color:rgba(192,57,43,0.35);background:rgba(192,57,43,0.04)">
+          <div class="stat-label" style="color:var(--red)">⚠️ Overdue Fees</div>
+          <div class="stat-value" id="fin-overdue" style="color:var(--red)">₹0</div>
+          <div class="stat-sub" id="fin-overdue-sub">expired students</div>
+        </div>
+      </div>
+
+      <!-- Visual bar -->
+      <div id="fin-bar-wrap" style="margin:6px 0 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm)">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:8px">
+          <span>📈 Revenue vs Expense Comparison</span>
+          <span id="fin-bar-pct"></span>
+        </div>
+        <div style="height:12px;border-radius:6px;background:var(--surface3);overflow:hidden;display:flex">
+          <div id="fin-bar-rev" style="height:100%;background:var(--green);border-radius:6px 0 0 6px;transition:width 0.4s"></div>
+          <div id="fin-bar-exp" style="height:100%;background:var(--red);transition:width 0.4s"></div>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:8px;font-size:11px">
+          <span style="color:var(--green)">● Revenue</span>
+          <span style="color:var(--red)">● Expenses</span>
+          <span style="color:var(--text3)">● Remaining</span>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-bottom:12px">Slot-wise Breakdown</div>
+      <div class="tbl-wrap" style="margin-bottom:20px">
+        <table class="bookings-table">
+          <thead>
+            <tr><th>Slot Type</th><th>Bookings</th><th>Revenue</th><th>Pending</th></tr>
+          </thead>
+          <tbody id="finance-breakdown"></tbody>
+        </table>
+      </div>
+
+      <!-- EXPENSES SECTION -->
+      <div class="section-hdr" style="margin-top:8px">
+        <div class="section-title">💸 Expenses</div>
+        <button class="btn btn-danger btn-sm" onclick="openExpenseModal()" style="background:rgba(192,57,43,0.1);color:var(--red);border:1px solid rgba(192,57,43,0.3)">+ Add Expense</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+        <select id="exp-filter-cat" onchange="renderFinance()" style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none">
+          <option value="">All Categories</option>
+          <option value="Rent">Rent</option>
+          <option value="Electricity">Electricity</option>
+          <option value="Internet">Internet</option>
+          <option value="Salary">Salary</option>
+          <option value="Maintenance">Maintenance</option>
+          <option value="Stationery">Stationery</option>
+          <option value="Other">Other</option>
+        </select>
+        <span style="font-size:11px;color:var(--text3)">(Date range upar wale filter se apply hoga)</span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="bookings-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Amount</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="expenses-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- OVERDUE TAB -->
+    <div class="tab-content" id="tab-overdue">
+      <div class="section-hdr">
+        <div class="section-title">Overdue Students</div>
+        <span class="badge red" id="overdue-count-badge">0</span>
+      </div>
+
+      <!-- Overdue Summary Cards -->
+      <div id="overdue-summary" style="display:none;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+          <div class="stat-card red">
+            <div class="stat-label">Total Overdue</div>
+            <div class="stat-value" id="overdue-total-fees">₹0</div>
+            <div class="stat-sub" id="overdue-total-sub">sabhi students</div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="stat-label">Pending Dues</div>
+            <div class="stat-value" id="overdue-pending-fees">₹0</div>
+            <div class="stat-sub" id="overdue-pending-sub">payment baaki</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Students</div>
+            <div class="stat-value" id="overdue-student-count">0</div>
+            <div class="stat-sub">overdue accounts</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px;padding:8px 12px;background:rgba(200,130,10,0.06);border-radius:6px;border:1px solid rgba(200,130,10,0.2)">
+        ⚠️ Yeh students jinki booking end ho gayi hai lekin abhi bhi seat par hain ya renewal nahi hua.
+      </div>
+      <div id="overdue-list"></div>
+    </div>
+
+    <!-- VIP TAB -->
+    <div class="tab-content" id="tab-vip">
+      <div class="section-hdr">
+        <div class="section-title">⭐ VIP / Concession Students</div>
+        <button class="btn btn-primary btn-sm" onclick="openVipModal()">+ Add VIP Student</button>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px;padding:8px 12px;background:rgba(124,77,186,0.06);border-radius:6px;border:1px solid rgba(124,77,186,0.2)">
+        ⭐ Yeh section un students ke liye hai jo concession fees par padhte hain. Seat optional hai — bina fixed seat wale students bhi add ho sakte hain.
+      </div>
+      <div class="tbl-wrap">
+        <table class="bookings-table" id="vip-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Seat (Optional)</th>
+              <th>Slot</th>
+              <th>Period</th>
+              <th>Fees (Concession)</th>
+              <th>Payment</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="vip-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DEMO TAB -->
+    <div class="tab-content" id="tab-demo">
+      <div class="section-hdr">
+        <div class="section-title">🎯 Demo Students</div>
+        <button class="btn btn-primary btn-sm" onclick="openDemoModal()">+ Add Demo Student</button>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px;padding:8px 12px;background:rgba(36,100,168,0.06);border-radius:6px;border:1px solid rgba(36,100,168,0.2)">
+        🎯 1–3 din ka trial dene wale students ki entry yahan hogi. Demo khatam hone par inhe regular booking mein convert kar sakte ho.
+      </div>
+      <div class="tbl-wrap">
+        <table class="bookings-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Slot</th>
+              <th>Demo Date</th>
+              <th>Days</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="demo-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div class="tab-content" id="tab-history">
+      <div class="section-hdr">
+        <div class="section-title">Student History</div>
+        <span style="font-size:12px;color:var(--text3)">Sabhi past + present students ka record</span>
+      </div>
+      <div class="filter-row">
+        <input type="text" id="search-history" placeholder="Search by name or phone…" oninput="renderHistory()">
+      </div>
+      <div class="tbl-wrap">
+        <table class="bookings-table">
+          <thead>
+            <tr>
+              <th style="width:40px">#</th>
+              <th onclick="sortHistory('name')" style="cursor:pointer;user-select:none" id="hth-name">Student <span class="sort-arrow" id="harr-name"></span></th>
+              <th onclick="sortHistory('seat')" style="cursor:pointer;user-select:none" id="hth-seat">Section / Seat <span class="sort-arrow" id="harr-seat"></span></th>
+              <th onclick="sortHistory('slot')" style="cursor:pointer;user-select:none" id="hth-slot">Slot <span class="sort-arrow" id="harr-slot"></span></th>
+              <th onclick="sortHistory('startDate')" style="cursor:pointer;user-select:none" id="hth-startDate">Period <span class="sort-arrow" id="harr-startDate">↓</span></th>
+              <th onclick="sortHistory('amount')" style="cursor:pointer;user-select:none" id="hth-amount">Amount <span class="sort-arrow" id="harr-amount"></span></th>
+              <th onclick="sortHistory('payment')" style="cursor:pointer;user-select:none" id="hth-payment">Payment <span class="sort-arrow" id="harr-payment"></span></th>
+              <th onclick="sortHistory('status')" style="cursor:pointer;user-select:none" id="hth-status">Status <span class="sort-arrow" id="harr-status"></span></th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="side-panel">
+    <!-- Expiry Alerts -->
+    <div class="side-section">
+      <div class="side-section-title">
+        <div class="dot" style="background:var(--red)"></div>
+        Expiring Soon (3 Days)
+      </div>
+      <div id="expiry-list"></div>
+    </div>
+
+    <!-- Waiting List -->
+    <div class="side-section">
+      <div class="side-section-title">
+        <div class="dot" style="background:var(--purple)"></div>
+        Waiting List
+      </div>
+      <div class="compact-form" id="waiting-form">
+        <input type="text" id="w-name" placeholder="Student Name">
+        <input type="text" id="w-phone" placeholder="Phone Number">
+        <select id="w-slot">
+          <option value="">Preferred Slot</option>
+          <option value="Morning">Morning (7AM–2PM)</option>
+          <option value="Evening">Evening (2PM–9PM)</option>
+          <option value="Full Day">Full Day (7AM–9PM)</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px" onclick="addToWaiting()">+ Add to Waiting List</button>
+      </div>
+      <div id="waiting-list"></div>
+    </div>
+
+    <!-- Quick Book -->
+    <div class="side-section">
+      <div class="side-section-title">
+        <div class="dot" style="background:var(--accent)"></div>
+        Quick Stats
+      </div>
+      <div class="finance-card">
+        <div class="fc-label">Total Active Bookings</div>
+        <div class="fc-value" id="qs-active" style="color:var(--green)">0</div>
+      </div>
+      <div class="finance-card">
+        <div class="fc-label">Expiring This Week</div>
+        <div class="fc-value" id="qs-week" style="color:var(--orange)">0</div>
+      </div>
+      <div class="finance-card">
+        <div class="fc-label">Expired / Overdue</div>
+        <div class="fc-value" id="qs-expired" style="color:var(--red)">0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOOKING MODAL -->
+<div class="modal-overlay" id="booking-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modal-title">New Booking</div>
+      <button class="modal-close" onclick="closeModal('booking-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-2col">
+        <div class="form-row">
+          <label>Section</label>
+          <select id="m-section" onchange="updateSeatOptions()">
+            <option value="A">Section A</option>
+            <option value="B">Section B</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Seat Number</label>
+          <select id="m-seat"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Student Name</label>
+        <input type="text" id="m-name" placeholder="Full name">
+      </div>
+      <div class="form-row">
+        <label>Phone</label>
+        <input type="text" id="m-phone" placeholder="Phone number">
+      </div>
+      <div class="form-row">
+        <label>Slot</label>
+        <select id="m-slot">
+          <option value="Morning">Morning (7 AM – 2 PM) — ₹550</option>
+          <option value="Evening">Evening (2 PM – 9 PM) — ₹550</option>
+          <option value="Full Day">Full Day (7 AM – 9 PM) — ₹900</option>
+        </select>
+      </div>
+      <div class="form-2col">
+        <div class="form-row">
+          <label>Start Date</label>
+          <input type="date" id="m-startdate">
+        </div>
+        <div class="form-row">
+          <label>End Date</label>
+          <input type="date" id="m-enddate">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Amount (₹)</label>
+        <input type="number" id="m-amount" placeholder="Enter fees manually">
+      </div>
+      <div class="form-row">
+        <label>Payment Status</label>
+        <select id="m-payment">
+          <option value="Paid">Paid</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+      <div class="form-row" style="display:flex;align-items:center;gap:10px;background:rgba(124,77,186,0.06);border:1px solid rgba(124,77,186,0.2);border-radius:8px;padding:10px 14px">
+        <input type="checkbox" id="m-concession" style="width:16px;height:16px;accent-color:var(--purple);margin:0;flex-shrink:0">
+        <label style="margin:0;text-transform:none;font-size:13px;color:var(--text);cursor:pointer;letter-spacing:0" for="m-concession">⭐ Yeh VIP / Concession student hai (kam fees mein admit)</label>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveBooking()" id="save-btn">Save Booking</button>
+        <button class="btn btn-ghost" onclick="closeModal('booking-modal')">Cancel</button>
+      </div>
+      <input type="hidden" id="m-edit-id">
+    </div>
+  </div>
+</div>
+
+<!-- VIEW BOOKING MODAL -->
+<div class="modal-overlay" id="view-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title">Booking Details</div>
+      <button class="modal-close" onclick="closeModal('view-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="view-modal-body"></div>
+  </div>
+</div>
+
+<!-- SEAT INFO MODAL -->
+<div class="modal-overlay" id="seat-info-modal">
+  <div class="modal" style="width:460px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="seat-info-title">🪑 Seat Details</div>
+      <button class="modal-close" onclick="closeModal('seat-info-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="seat-info-body"></div>
+  </div>
+</div>
+
+<!-- RENEWAL MODAL -->
+<div class="modal-overlay" id="renewal-modal">
+  <div class="modal" style="width:440px">
+    <div class="modal-hdr">
+      <div class="modal-title">🔁 Renew Booking</div>
+      <button class="modal-close" onclick="closeModal('renewal-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="renewal-info" id="renewal-info"></div>
+      <div class="form-row">
+        <label>New Start Date</label>
+        <input type="date" id="r-startdate">
+      </div>
+      <div class="form-row">
+        <label>New End Date</label>
+        <input type="date" id="r-enddate">
+      </div>
+      <div class="form-row">
+        <label>Renewal Fees (₹)</label>
+        <input type="number" id="r-amount" placeholder="Enter amount">
+      </div>
+      <div class="form-row">
+        <label>Payment Status</label>
+        <select id="r-payment">
+          <option value="Paid">Paid</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveRenewal()">🔁 Confirm Renewal</button>
+        <button class="btn btn-ghost" onclick="closeModal('renewal-modal')">Cancel</button>
+      </div>
+      <input type="hidden" id="r-booking-id">
+    </div>
+  </div>
+</div>
+
+<!-- VIP MODAL -->
+<div class="modal-overlay" id="vip-modal">
+  <div class="modal" style="width:480px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="vip-modal-title">⭐ VIP / Concession Student</div>
+      <button class="modal-close" onclick="closeModal('vip-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Student Name</label>
+        <input type="text" id="v-name" placeholder="Full name">
+      </div>
+      <div class="form-row">
+        <label>Phone</label>
+        <input type="text" id="v-phone" placeholder="Phone number">
+      </div>
+      <div class="form-2col">
+        <div class="form-row">
+          <label>Section (Optional)</label>
+          <select id="v-section">
+            <option value="">— No Fixed Seat —</option>
+            <option value="A">Section A</option>
+            <option value="B">Section B</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Seat No. (Optional)</label>
+          <input type="number" id="v-seat" placeholder="e.g. 5" min="1" max="44">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Slot</label>
+        <select id="v-slot">
+          <option value="Morning">Morning (7 AM – 2 PM)</option>
+          <option value="Evening">Evening (2 PM – 9 PM)</option>
+          <option value="Full Day">Full Day (7 AM – 9 PM)</option>
+        </select>
+      </div>
+      <div class="form-2col">
+        <div class="form-row">
+          <label>Start Date</label>
+          <input type="date" id="v-startdate">
+        </div>
+        <div class="form-row">
+          <label>End Date</label>
+          <input type="date" id="v-enddate">
+        </div>
+      </div>
+      <div class="form-2col">
+        <div class="form-row">
+          <label>Concession Fees (₹)</label>
+          <input type="number" id="v-amount" placeholder="Reduced amount">
+        </div>
+        <div class="form-row">
+          <label>Payment Status</label>
+          <select id="v-payment">
+            <option value="Paid">Paid</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveVipStudent()">⭐ Save VIP Student</button>
+        <button class="btn btn-ghost" onclick="closeModal('vip-modal')">Cancel</button>
+      </div>
+      <input type="hidden" id="v-edit-id">
+    </div>
+  </div>
+</div>
+
+<!-- DEMO MODAL -->
+<div class="modal-overlay" id="demo-modal">
+  <div class="modal" style="width:440px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="demo-modal-title">🎯 Add Demo Student</div>
+      <button class="modal-close" onclick="closeModal('demo-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Student Name</label>
+        <input type="text" id="d-name" placeholder="Full name">
+      </div>
+      <div class="form-row">
+        <label>Phone</label>
+        <input type="text" id="d-phone" placeholder="Phone number">
+      </div>
+      <div class="form-row">
+        <label>Slot</label>
+        <select id="d-slot">
+          <option value="Morning">Morning (7 AM – 2 PM)</option>
+          <option value="Evening">Evening (2 PM – 9 PM)</option>
+          <option value="Full Day">Full Day (7 AM – 9 PM)</option>
+        </select>
+      </div>
+      <div class="form-2col">
+        <div class="form-row">
+          <label>Demo Start Date</label>
+          <input type="date" id="d-startdate">
+        </div>
+        <div class="form-row">
+          <label>Demo Days (1–3)</label>
+          <select id="d-days">
+            <option value="1">1 Day</option>
+            <option value="2">2 Days</option>
+            <option value="3" selected>3 Days</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveDemoStudent()">🎯 Save Demo Entry</button>
+        <button class="btn btn-ghost" onclick="closeModal('demo-modal')">Cancel</button>
+      </div>
+      <input type="hidden" id="d-edit-id">
+    </div>
+  </div>
+</div>
+
+<!-- WHATSAPP MESSAGE MODAL -->
+<div class="modal-overlay" id="wa-modal">
+  <div class="modal" style="width:480px">
+    <div class="modal-hdr">
+      <div class="modal-title">💬 WhatsApp Message</div>
+      <button class="modal-close" onclick="closeModal('wa-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="wa-student-info" style="background:rgba(30,138,82,0.06);border:1px solid rgba(30,138,82,0.2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--text2)"></div>
+      <div class="form-row">
+        <label>Message (edit kar sakte ho)</label>
+        <textarea id="wa-message" rows="6" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:vertical;transition:border-color 0.2s;line-height:1.6" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+      </div>
+      <div id="wa-last-sent" style="font-size:11px;color:var(--text3);margin-bottom:14px;padding:6px 10px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);display:none"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="sendWhatsApp()" style="background:#25D366;color:#fff;border:none;display:flex;align-items:center;gap:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          WhatsApp pe Bhejo
+        </button>
+        <button class="btn btn-primary" onclick="sendSMS()" style="background:#2464a8;color:#fff;border:none;display:flex;align-items:center;gap:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+          SMS Bhejo
+        </button>
+        <button class="btn btn-ghost" onclick="closeModal('wa-modal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EXPENSE MODAL -->
+<div class="modal-overlay" id="expense-modal">
+  <div class="modal" style="width:420px">
+    <div class="modal-hdr">
+      <div class="modal-title">💸 Add Expense</div>
+      <button class="modal-close" onclick="closeModal('expense-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-2col">
+        <div class="form-row">
+          <label>Date</label>
+          <input type="date" id="exp-date">
+        </div>
+        <div class="form-row">
+          <label>Amount (₹)</label>
+          <input type="number" id="exp-amount" placeholder="0" min="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Category</label>
+        <select id="exp-category">
+          <option value="Rent">Rent</option>
+          <option value="Electricity">Electricity</option>
+          <option value="Internet">Internet</option>
+          <option value="Salary">Salary</option>
+          <option value="Maintenance">Maintenance</option>
+          <option value="Stationery">Stationery</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Description</label>
+        <input type="text" id="exp-desc" placeholder="e.g. March rent payment">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveExpense()">💾 Save Expense</button>
+        <button class="btn btn-ghost" onclick="closeModal('expense-modal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ===================== FIREBASE SDK ===================== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, collection, doc,
+  getDocs, setDoc, deleteDoc, onSnapshot, writeBatch
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ========================================================
+// 🔧 PASTE YOUR FIREBASE CONFIG HERE
+// Go to Firebase Console → Project Settings → Your Apps → Web
+// ========================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCHe09h1mS91Ze0qNuJ-UwC7wD22MSVW3c",
+  authDomain: "vidhyaarjan-library-87766.firebaseapp.com",
+  projectId: "vidhyaarjan-library-87766",
+  storageBucket: "vidhyaarjan-library-87766.firebasestorage.app",
+  messagingSenderId: "827699462834",
+  appId: "1:827699462834:web:662a7ad49fb5bd0d243fab",
+  measurementId: "G-X59LZXFS47"
+};
+// ========================================================
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ==================== IN-MEMORY CACHE ====================
+// All data is loaded from Firebase once on startup,
+// then kept in memory for fast reads. Writes go to Firebase
+// AND update the cache so the UI stays snappy.
+window._cache = {
+  bookings: [],
+  history: [],
+  waiting: [],
+  vip: [],
+  demo: [],
+  expenses: [],
+  settings: {}
+};
+window._dbReady = false;
+
+// ==================== FIREBASE HELPERS ====================
+async function fbGetAll(colName) {
+  const snap = await getDocs(collection(db, colName));
+  return snap.docs.map(d => ({ ...d.data(), _docId: d.id }));
+}
+
+async function fbSet(colName, id, data) {
+  await setDoc(doc(db, colName, id), data);
+}
+
+async function fbDelete(colName, id) {
+  await deleteDoc(doc(db, colName, id));
+}
+
+// ==================== DATA ACCESSORS ====================
+window.getBookings = function() { return window._cache.bookings; };
+window.saveBookings = async function(arr) {
+  window._cache.bookings = arr;
+  // Rewrite entire bookings collection using batch
+  const batch = writeBatch(db);
+  // First mark existing docs for deletion by fetching current IDs
+  const snap = await getDocs(collection(db, 'bookings'));
+  snap.docs.forEach(d => batch.delete(d.ref));
+  arr.forEach(b => {
+    const ref = doc(db, 'bookings', b.id);
+    batch.set(ref, b);
+  });
+  await batch.commit();
+};
+
+window.getHistory = function() { return window._cache.history; };
+window.saveHistory = async function(arr) {
+  window._cache.history = arr;
+  const batch = writeBatch(db);
+  const snap = await getDocs(collection(db, 'history'));
+  snap.docs.forEach(d => batch.delete(d.ref));
+  arr.forEach(h => {
+    const ref = doc(db, 'history', h.id);
+    batch.set(ref, h);
+  });
+  await batch.commit();
+};
+
+window.archiveToHistory = async function(booking) {
+  const hist = window.getHistory();
+  if (!hist.find(h => h.id === booking.id)) {
+    const newEntry = { ...booking, archivedAt: today() };
+    hist.unshift(newEntry);
+    window._cache.history = hist;
+    await fbSet('history', booking.id, newEntry);
+  }
+};
+
+window.getWaiting = function() { return window._cache.waiting; };
+window.saveWaiting = async function(arr) {
+  window._cache.waiting = arr;
+  const batch = writeBatch(db);
+  const snap = await getDocs(collection(db, 'waiting'));
+  snap.docs.forEach(d => batch.delete(d.ref));
+  arr.forEach((w, i) => {
+    const ref = doc(db, 'waiting', 'w_' + i);
+    batch.set(ref, w);
+  });
+  await batch.commit();
+};
+
+window.getLibSettings = function() { return window._cache.settings; };
+window.saveLibSettings = async function(s) {
+  window._cache.settings = s;
+  await fbSet('settings', 'main', s);
+};
+
+window.getVip = function() { return window._cache.vip; };
+window.saveVip = async function(arr) {
+  window._cache.vip = arr;
+  const batch = writeBatch(db);
+  const snap = await getDocs(collection(db, 'vip'));
+  snap.docs.forEach(d => batch.delete(d.ref));
+  arr.forEach(v => {
+    const ref = doc(db, 'vip', v.id);
+    batch.set(ref, v);
+  });
+  await batch.commit();
+};
+
+window.getDemo = function() { return window._cache.demo; };
+window.saveDemo = async function(arr) {
+  window._cache.demo = arr;
+  const batch = writeBatch(db);
+  const snap = await getDocs(collection(db, 'demo'));
+  snap.docs.forEach(d => batch.delete(d.ref));
+  arr.forEach(d => {
+    const ref = doc(db, 'demo', d.id);
+    batch.set(ref, d);
+  });
+  await batch.commit();
+};
+
+window.getExpenses = function() { return window._cache.expenses; };
+window.saveExpenses = async function(arr) {
+  window._cache.expenses = arr;
+  const batch = writeBatch(db);
+  const snap = await getDocs(collection(db, 'expenses'));
+  snap.docs.forEach(d => batch.delete(d.ref));
+  arr.forEach(e => {
+    const ref = doc(db, 'expenses', e.id);
+    batch.set(ref, e);
+  });
+  await batch.commit();
+};
+
+// ==================== REAL-TIME LISTENERS ====================
+// When any other user/device changes data, our UI auto-updates
+function startListeners() {
+  onSnapshot(collection(db, 'bookings'), snap => {
+    window._cache.bookings = snap.docs.map(d => d.data());
+    if (window._dbReady) renderAll();
+  });
+  onSnapshot(collection(db, 'history'), snap => {
+    window._cache.history = snap.docs.map(d => d.data());
+    if (window._dbReady) { /* history updates on tab open */ }
+  });
+  onSnapshot(collection(db, 'waiting'), snap => {
+    window._cache.waiting = snap.docs.map(d => d.data());
+    if (window._dbReady) renderWaitingList();
+  });
+  onSnapshot(collection(db, 'vip'), snap => {
+    window._cache.vip = snap.docs.map(d => d.data());
+    if (window._dbReady) renderVip();
+  });
+  onSnapshot(collection(db, 'demo'), snap => {
+    window._cache.demo = snap.docs.map(d => d.data());
+    if (window._dbReady) renderDemo();
+  });
+  onSnapshot(collection(db, 'expenses'), snap => {
+    window._cache.expenses = snap.docs.map(d => d.data());
+    if (window._dbReady) renderFinance();
+  });
+}
+
+// ==================== INIT: LOAD ALL DATA ====================
+async function initFirebase() {
+  showLoading(true);
+  try {
+    // Load all collections in parallel
+    const [bookings, history, waiting, vip, demo, expenses, settingsSnap] = await Promise.all([
+      fbGetAll('bookings'),
+      fbGetAll('history'),
+      fbGetAll('waiting'),
+      fbGetAll('vip'),
+      fbGetAll('demo'),
+      fbGetAll('expenses'),
+      getDocs(collection(db, 'settings'))
+    ]);
+
+    window._cache.bookings = bookings;
+    window._cache.history = history;
+    window._cache.waiting = waiting;
+    window._cache.vip = vip;
+    window._cache.demo = demo;
+    window._cache.expenses = expenses;
+
+    const settingsDoc = settingsSnap.docs.find(d => d.id === 'main');
+    window._cache.settings = settingsDoc ? settingsDoc.data() : {};
+
+    // Seed sample data if empty (first time only)
+    if (!bookings.length) {
+      const samples = [
+        { id: genId(), name: 'Rahul Sharma', phone: '9876543210', section: 'A', seat: 1, slot: 'Morning', startDate: addDays(today(), -25), endDate: addDays(today(), 5), amount: 550, payment: 'Paid' },
+        { id: genId(), name: 'Priya Patel', phone: '9123456789', section: 'A', seat: 2, slot: 'Full Day', startDate: addDays(today(), -20), endDate: addDays(today(), 10), amount: 900, payment: 'Paid' },
+        { id: genId(), name: 'Amit Kumar', phone: '9988776655', section: 'A', seat: 3, slot: 'Evening', startDate: addDays(today(), -15), endDate: addDays(today(), 15), amount: 550, payment: 'Pending' },
+        { id: genId(), name: 'Sunita Devi', phone: '9001122334', section: 'B', seat: 5, slot: 'Morning', startDate: addDays(today(), -28), endDate: addDays(today(), 2), amount: 550, payment: 'Paid' },
+        { id: genId(), name: 'Vikram Singh', phone: '9445566778', section: 'B', seat: 7, slot: 'Full Day', startDate: addDays(today(), -10), endDate: addDays(today(), 20), amount: 900, payment: 'Paid' },
+      ];
+      await window.saveBookings(samples);
+    }
+
+    window._dbReady = true;
+    startListeners();
+    showLoading(false);
+    applyLibSettings();
+
+    // Pattern lock check — Firebase load hone ke BAAD dikhao
+    if (sessionStorage.getItem('vl_auth') !== 'true') {
+      // Show pattern lock
+      const lockScreen = document.getElementById('pattern-lock-screen');
+      lockScreen.style.display = 'flex';
+      // initPatternLock already called at bottom of script — grid already built
+    } else {
+      // Already authenticated this session
+      renderAll();
+    }
+
+    document.getElementById('m-startdate').value = today();
+    showToast('Connected to Firebase ✓', 'success');
+  } catch (err) {
+    showLoading(false);
+    console.error('Firebase error:', err);
+    document.getElementById('firebase-error').style.display = 'flex';
+  }
+}
+
+function showLoading(show) {
+  document.getElementById('firebase-loading').style.display = show ? 'flex' : 'none';
+}
+
+// Start everything
+initFirebase();
+
+</script>
+<script>
+// ==================== DATA ====================
+const SECTION_A_SEATS = 42;
+const SECTION_B_SEATS = 44;
+
+// getBookings, saveBookings, getHistory, saveHistory,
+// archiveToHistory, getWaiting, saveWaiting,
+// getLibSettings, saveLibSettings
+// — all defined above in the Firebase module block
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+}
+function addDays(dateStr, days) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0,10);
+}
+function addMonths(dateStr, months) {
+  const d = new Date(dateStr);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0,10);
+}
+function today() {
+  return new Date().toISOString().slice(0,10);
+}
+function fmtDate(d) {
+  if(!d) return '—';
+  return new Date(d).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+function diffDays(a, b) {
+  return Math.ceil((new Date(b) - new Date(a)) / 86400000);
+}
+
+// ==================== SEAT STATUS ====================
+// Returns: 'available', 'morning', 'evening', 'fullday', 'expired'
+function getSeatStatus(section, seatNum) {
+  const bookings = getBookings();
+  const active = bookings.filter(b =>
+    b.section === section &&
+    b.seat === seatNum &&
+    b.endDate >= today()
+  );
+  if (!active.length) return 'available';
+  const slots = active.map(b => b.slot);
+  if (slots.includes('Full Day')) return 'fullday';
+  const hasMorning = slots.includes('Morning');
+  const hasEvening = slots.includes('Evening');
+  if (hasMorning && hasEvening) return 'fullday';
+  if (hasMorning) return 'morning';
+  if (hasEvening) return 'evening';
+  return 'available';
+}
+
+// Can a seat accept a new booking of given slot?
+function canBook(section, seatNum, slot) {
+  const status = getSeatStatus(section, seatNum);
+  if (status === 'available') return true;
+  if (status === 'fullday') return false;
+  if (slot === 'Full Day') return false;
+  if (status === 'morning' && slot === 'Morning') return false;
+  if (status === 'evening' && slot === 'Evening') return false;
+  if (status === 'morning' && slot === 'Evening') return true;
+  if (status === 'evening' && slot === 'Morning') return true;
+  return false;
+}
+
+// ==================== CURRENT SECTION ====================
+let currentSection = 'A';
+function switchSection(sec) {
+  currentSection = sec;
+  document.getElementById('sec-btn-a').classList.toggle('active', sec === 'A');
+  document.getElementById('sec-btn-b').classList.toggle('active', sec === 'B');
+  document.getElementById('seat-grid-A').style.display = sec === 'A' ? 'grid' : 'none';
+  document.getElementById('seat-grid-B').style.display = sec === 'B' ? 'grid' : 'none';
+}
+
+// ==================== RENDER SEAT GRIDS ====================
+function renderSeatGrid(section) {
+  const count = section === 'A' ? SECTION_A_SEATS : SECTION_B_SEATS;
+  const el = document.getElementById(`seat-grid-${section}`);
+  const bookings = getBookings();
+  const t = today();
+  el.innerHTML = '';
+  for (let i = 1; i <= count; i++) {
+    const status = getSeatStatus(section, i);
+    const cls = {
+      available: 'seat-available',
+      morning: 'seat-morning',
+      evening: 'seat-evening',
+      fullday: 'seat-fullday',
+      expired: 'seat-expired'
+    }[status] || 'seat-available';
+    const slotLabel = {
+      available: 'FREE',
+      morning: 'MORN',
+      evening: 'EVE',
+      fullday: 'FULL',
+      expired: 'EXP'
+    }[status];
+
+    // Build tooltip text
+    let tooltipText = '';
+    if (status === 'available') {
+      tooltipText = 'Seat available — tap to book';
+    } else {
+      const activeBookings = bookings.filter(b =>
+        b.section === section && b.seat === i && b.endDate >= t
+      );
+      if (activeBookings.length) {
+        tooltipText = activeBookings.map(b =>
+          `${b.name}${activeBookings.length > 1 ? ' (' + b.slot + ')' : ''}`
+        ).join(' + ');
+        const endDate = activeBookings.map(b => b.endDate).sort().pop();
+        tooltipText += `\nExpires: ${fmtDate(endDate)}`;
+      }
+    }
+
+    const btn = document.createElement('button');
+    btn.className = `seat-btn ${cls}`;
+    btn.innerHTML = `
+      <span class="seat-num">${i}</span>
+      <span class="seat-slot">${slotLabel}</span>
+      <div class="seat-tooltip">${tooltipText.replace(/\n/g, '<br>')}</div>
+    `;
+    if (status === 'available') {
+      btn.onclick = () => openBookingModal(section, i);
+    } else {
+      btn.onclick = () => openSeatInfoModal(section, i);
+    }
+    el.appendChild(btn);
+  }
+}
+
+// ==================== STATS ====================
+function updateStats() {
+  let avail = 0, occ = 0, morn = 0, eve = 0;
+  ['A','B'].forEach(sec => {
+    const count = sec === 'A' ? SECTION_A_SEATS : SECTION_B_SEATS;
+    for (let i = 1; i <= count; i++) {
+      const s = getSeatStatus(sec, i);
+      if (s === 'available') avail++;
+      else if (s === 'fullday') occ++;
+      else if (s === 'morning') morn++;
+      else if (s === 'evening') eve++;
+    }
+  });
+  document.getElementById('stat-available').textContent = avail;
+  document.getElementById('stat-occupied').textContent = occ;
+  document.getElementById('stat-morning').textContent = morn;
+  document.getElementById('stat-evening').textContent = eve;
+}
+
+// ==================== TAB SWITCHING ====================
+function switchTab(tab) {
+  const tabs = ['seats','bookings','finance','overdue','vip','demo','history'];
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  if (tab === 'bookings') renderBookingsTable();
+  if (tab === 'finance')  renderFinance();
+  if (tab === 'overdue')  renderOverdue();
+  if (tab === 'vip')      renderVip();
+  if (tab === 'demo')     renderDemo();
+  if (tab === 'history')  renderHistory();
+}
+
+// ==================== MODAL ====================
+let editingId = null;
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  editingId = null;
+}
+function openBookingModal(section, seatNum) {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'New Booking';
+  document.getElementById('save-btn').textContent = 'Save Booking';
+  document.getElementById('m-edit-id').value = '';
+  document.getElementById('m-name').value = '';
+  document.getElementById('m-phone').value = '';
+  document.getElementById('m-slot').value = 'Morning';
+  document.getElementById('m-amount').value = '';
+  document.getElementById('m-payment').value = 'Paid';
+  document.getElementById('m-concession').checked = false;
+  const d = new Date().toISOString().slice(0,10);
+  document.getElementById('m-startdate').value = d;
+  document.getElementById('m-enddate').value = addDays(d, 30);
+  document.getElementById('m-section').value = section || 'A';
+  updateSeatOptions(section, seatNum);
+  document.getElementById('booking-modal').classList.add('open');
+}
+
+function updateSeatOptions(forceSection, forceSeat) {
+  const section = forceSection || document.getElementById('m-section').value;
+  const count = section === 'A' ? SECTION_A_SEATS : SECTION_B_SEATS;
+  const slot = document.getElementById('m-slot').value || 'Morning';
+  const sel = document.getElementById('m-seat');
+  sel.innerHTML = '';
+  for (let i = 1; i <= count; i++) {
+    const status = getSeatStatus(section, i);
+    const available = status === 'available' ||
+      (status === 'morning' && slot === 'Evening') ||
+      (status === 'evening' && slot === 'Morning');
+    if (available || (forceSeat === i)) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `Seat ${i}${available ? '' : ' (partial)'}`;
+      if (forceSeat === i) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+  const slotSel = document.getElementById('m-slot');
+  if (slotSel) {
+    slotSel.onchange = () => { updateSeatOptions(); };
+  }
+}
+
+async function saveBooking() {
+  const name = document.getElementById('m-name').value.trim();
+  const phone = document.getElementById('m-phone').value.trim();
+  const section = document.getElementById('m-section').value;
+  const seat = parseInt(document.getElementById('m-seat').value);
+  const slot = document.getElementById('m-slot').value;
+  const startDate = document.getElementById('m-startdate').value;
+  const endDate = document.getElementById('m-enddate').value;
+  const amount = parseFloat(document.getElementById('m-amount').value) || 0;
+  const payment = document.getElementById('m-payment').value;
+  const concession = document.getElementById('m-concession').checked;
+  const editId = document.getElementById('m-edit-id').value;
+
+  if (!name || !startDate || !endDate || !seat) { showToast('Please fill all required fields', 'error'); return; }
+  if (!document.getElementById('m-amount').value) { showToast('Please enter fees amount', 'error'); return; }
+  if (endDate <= startDate) { showToast('End date must be after start date', 'error'); return; }
+
+  if (!editId && !canBook(section, seat, slot)) {
+    showToast(`Seat ${seat} is not available for ${slot} slot`, 'error');
+    return;
+  }
+
+  const bookings = getBookings();
+
+  if (editId) {
+    const idx = bookings.findIndex(b => b.id === editId);
+    if (idx !== -1) {
+      bookings[idx] = { ...bookings[idx], name, phone, section, seat, slot, startDate, endDate, amount, payment, concession };
+    }
+    showToast('Booking updated!', 'success');
+  } else {
+    bookings.push({ id: genId(), name, phone, section, seat, slot, startDate, endDate, amount, payment, concession });
+    showToast('Booking saved!', 'success');
+  }
+  await saveBookings(bookings);
+  closeModal('booking-modal');
+  renderAll();
+}
+
+// ==================== EDIT BOOKING ====================
+function editBooking(id) {
+  const bookings = getBookings();
+  const b = bookings.find(x => x.id === id);
+  if (!b) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit Booking';
+  document.getElementById('save-btn').textContent = 'Update Booking';
+  document.getElementById('m-edit-id').value = id;
+  document.getElementById('m-name').value = b.name;
+  document.getElementById('m-phone').value = b.phone || '';
+  document.getElementById('m-section').value = b.section;
+  document.getElementById('m-slot').value = b.slot;
+  document.getElementById('m-startdate').value = b.startDate;
+  document.getElementById('m-enddate').value = b.endDate;
+  document.getElementById('m-amount').value = b.amount;
+  document.getElementById('m-payment').value = b.payment;
+  document.getElementById('m-concession').checked = b.concession || false;
+  updateSeatOptions(b.section, b.seat);
+  document.getElementById('m-seat').value = b.seat;
+  document.getElementById('booking-modal').classList.add('open');
+}
+
+async function deleteBooking(id) {
+  if (!confirm('Delete this booking? Student data will be saved in History.')) return;
+  const allBookings = getBookings();
+  const b = allBookings.find(x => x.id === id);
+  if (b) await archiveToHistory(b);
+  const bookings = allBookings.filter(b => b.id !== id);
+  await saveBookings(bookings);
+  showToast('Booking deleted — saved in History', 'success');
+  renderAll();
+  closeModal('view-modal');
+}
+
+async function markPaid(id) {
+  const bookings = getBookings();
+  const idx = bookings.findIndex(b => b.id === id);
+  if (idx !== -1) { bookings[idx].payment = 'Paid'; await saveBookings(bookings); }
+  showToast('Marked as Paid', 'success');
+  renderAll();
+  closeModal('view-modal');
+}
+
+// ==================== VIEW BOOKING ====================
+function viewBooking(id) {
+  const bookings = getBookings();
+  const b = bookings.find(x => x.id === id);
+  if (!b) return;
+  const expired = b.endDate < today();
+  const slotColor = { Morning: 'yellow', Evening: 'blue', 'Full Day': 'red' }[b.slot] || 'yellow';
+  document.getElementById('view-modal-body').innerHTML = `
+    <div class="info-grid">
+      <div class="info-item"><div class="lbl">Student</div><div class="val">${b.name}</div></div>
+      <div class="info-item"><div class="lbl">Phone</div><div class="val">${b.phone || '—'}</div></div>
+      <div class="info-item"><div class="lbl">Section / Seat</div><div class="val">Section ${b.section} — Seat ${b.seat}</div></div>
+      <div class="info-item"><div class="lbl">Slot</div><div class="val"><span class="badge ${slotColor}">${b.slot}</span></div></div>
+      <div class="info-item"><div class="lbl">Start Date</div><div class="val">${fmtDate(b.startDate)}</div></div>
+      <div class="info-item"><div class="lbl">End Date</div><div class="val">${fmtDate(b.endDate)}</div></div>
+      <div class="info-item"><div class="lbl">Amount</div><div class="val">₹${b.amount}</div></div>
+      <div class="info-item"><div class="lbl">Status</div><div class="val">
+        <span class="payment-status ${b.payment === 'Paid' ? 'paid' : 'pending'}">
+          ${b.payment === 'Paid' ? '✓' : '⏳'} ${b.payment}
+        </span>
+      </div></div>
+    </div>
+    ${expired ? '<div style="color:var(--red);font-size:12px;margin-bottom:12px;padding:8px;background:rgba(240,90,90,0.1);border-radius:6px;border:1px solid rgba(240,90,90,0.3)">⚠️ This booking has expired</div>' : ''}
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="editBooking('${b.id}');closeModal('view-modal')">✏️ Edit</button>
+      <button class="btn btn-green btn-sm" onclick="openRenewalModal('${b.id}');closeModal('view-modal')">🔁 Renew</button>
+      ${b.payment === 'Pending' ? `<button class="btn btn-green btn-sm" onclick="markPaid('${b.id}')">✓ Mark Paid</button>` : ''}
+      ${b.payment === 'Paid' ? `<button class="btn btn-blue btn-sm" onclick="generateReceipt('${b.id}')">🧾 Receipt</button>` : ''}
+      <button class="btn btn-danger btn-sm" onclick="deleteBooking('${b.id}')">🗑 Delete</button>
+    </div>
+  `;
+  document.getElementById('view-modal').classList.add('open');
+}
+
+// ==================== BOOKINGS TABLE ====================
+let _sortCol = 'endDate';
+let _sortDir = 'desc';
+
+function sortBookings(col) {
+  if (_sortCol === col) {
+    _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _sortCol = col;
+    _sortDir = 'asc';
+  }
+  renderBookingsTable();
+}
+
+function renderBookingsTable() {
+  const search = (document.getElementById('search-booking').value || '').toLowerCase();
+  const filterSec = document.getElementById('filter-section').value;
+  const filterSlot = document.getElementById('filter-slot').value;
+  const filterPay = document.getElementById('filter-payment').value;
+  let bookings = getBookings();
+  if (search) bookings = bookings.filter(b => b.name.toLowerCase().includes(search) || String(b.seat).includes(search));
+  if (filterSec) bookings = bookings.filter(b => b.section === filterSec);
+  if (filterSlot) bookings = bookings.filter(b => b.slot === filterSlot);
+  if (filterPay) bookings = bookings.filter(b => b.payment === filterPay);
+
+  // Sort
+  bookings.sort((a, b) => {
+    let va, vb;
+    switch (_sortCol) {
+      case 'name':    va = a.name.toLowerCase();   vb = b.name.toLowerCase(); break;
+      case 'seat':    va = (a.section || '') + String(a.seat).padStart(3,'0');
+                      vb = (b.section || '') + String(b.seat).padStart(3,'0'); break;
+      case 'slot':    va = a.slot;   vb = b.slot; break;
+      case 'endDate': va = a.endDate; vb = b.endDate; break;
+      case 'amount':  va = a.amount;  vb = b.amount; break;
+      case 'payment': va = a.payment; vb = b.payment; break;
+      default:        va = a.endDate; vb = b.endDate;
+    }
+    if (va < vb) return _sortDir === 'asc' ? -1 : 1;
+    if (va > vb) return _sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Update header arrows
+  ['name','seat','slot','endDate','amount','payment'].forEach(col => {
+    const arr = document.getElementById('arr-' + col);
+    const th  = document.getElementById('th-'  + col);
+    if (!arr) return;
+    if (col === _sortCol) {
+      arr.textContent = _sortDir === 'asc' ? '↑' : '↓';
+      th.classList.add('sort-active');
+    } else {
+      arr.textContent = '';
+      th.classList.remove('sort-active');
+    }
+  });
+
+  const tbody = document.getElementById('bookings-tbody');
+  if (!bookings.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text3)">No bookings found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = bookings.map((b, i) => {
+    const expired = b.endDate < today();
+    const slotCls = { Morning: 'slot-morning', Evening: 'slot-evening', 'Full Day': 'slot-fullday' }[b.slot] || '';
+    return `<tr>
+      <td style="font-family:'DM Mono',monospace;color:var(--text3);font-size:12px;text-align:center">${i + 1}</td>
+      <td>
+        <div style="font-weight:500">${b.concession ? '⭐ ' : ''}${b.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${b.phone || ''}</div>
+      </td>
+      <td><span style="color:var(--text2)">§${b.section}</span> · S${b.seat}</td>
+      <td><span class="${slotCls}">${b.slot}</span></td>
+      <td>
+        <div style="font-size:12px">${fmtDate(b.startDate)}</div>
+        <div style="font-size:11px;color:${expired ? 'var(--red)' : 'var(--text3)'}">→ ${fmtDate(b.endDate)}</div>
+      </td>
+      <td style="font-family:'DM Mono',monospace">₹${b.amount}</td>
+      <td><span class="payment-status ${b.payment === 'Paid' ? 'paid' : 'pending'}">${b.payment === 'Paid' ? '✓' : '⏳'} ${b.payment}</span></td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="viewBooking('${b.id}')">View</button>
+          ${b.payment === 'Paid' ? `<button class="btn btn-blue btn-sm" onclick="generateReceipt('${b.id}')">🧾</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Total count footer
+  tbody.innerHTML += `<tr style="background:var(--surface2)">
+    <td colspan="2" style="font-size:12px;font-weight:600;color:var(--text2);padding:10px 12px">
+      कुल: <span style="font-family:'DM Mono',monospace;color:var(--accent)">${bookings.length}</span> bookings
+    </td>
+    <td colspan="6" style="font-size:11px;color:var(--text3);padding:10px 12px;text-align:right">
+      Paid: <strong style="color:var(--green)">${bookings.filter(b=>b.payment==='Paid').length}</strong>
+      &nbsp;·&nbsp;
+      Pending: <strong style="color:var(--accent)">${bookings.filter(b=>b.payment==='Pending').length}</strong>
+      &nbsp;·&nbsp;
+      Total: <strong style="font-family:'DM Mono',monospace">₹${bookings.reduce((s,b)=>s+b.amount,0).toLocaleString()}</strong>
+    </td>
+  </tr>`;
+}
+
+// ==================== FINANCE ====================
+let _finRange = 'thisMonth';
+
+function setFinRange(range) {
+  _finRange = range;
+  document.querySelectorAll('.fin-range-btn').forEach(b => b.classList.remove('active'));
+  const idx = ['thisMonth','lastMonth','last3','thisYear','custom'].indexOf(range);
+  const btns = document.querySelectorAll('.fin-range-btn');
+  if (btns[idx]) btns[idx].classList.add('active');
+
+  const customDiv = document.getElementById('fin-custom-range');
+  if (customDiv) customDiv.style.display = range === 'custom' ? 'flex' : 'none';
+
+  if (range !== 'custom') renderFinance();
+}
+
+function getFinDateRange() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+
+  if (_finRange === 'thisMonth') {
+    return { from: `${yyyy}-${mm}-01`, to: today(), label: `${now.toLocaleDateString('en-IN',{month:'long',year:'numeric'})}` };
+  }
+  if (_finRange === 'lastMonth') {
+    const d = new Date(yyyy, now.getMonth() - 1, 1);
+    const yr2 = d.getFullYear(), mo2 = String(d.getMonth()+1).padStart(2,'0');
+    const lastDay = new Date(yyyy, now.getMonth(), 0).getDate();
+    return { from: `${yr2}-${mo2}-01`, to: `${yr2}-${mo2}-${lastDay}`,
+      label: d.toLocaleDateString('en-IN',{month:'long',year:'numeric'}) };
+  }
+  if (_finRange === 'last3') {
+    const from = new Date(yyyy, now.getMonth() - 2, 1);
+    const yr2 = from.getFullYear(), mo2 = String(from.getMonth()+1).padStart(2,'0');
+    return { from: `${yr2}-${mo2}-01`, to: today(), label: `Last 3 Months` };
+  }
+  if (_finRange === 'thisYear') {
+    return { from: `${yyyy}-01-01`, to: today(), label: `Year ${yyyy}` };
+  }
+  if (_finRange === 'custom') {
+    const from = document.getElementById('fin-from') ? document.getElementById('fin-from').value : '';
+    const to   = document.getElementById('fin-to')   ? document.getElementById('fin-to').value   : '';
+    if (from && to) {
+      return { from, to, label: `${fmtDate(from)} → ${fmtDate(to)}` };
+    }
+    return { from: `${yyyy}-${mm}-01`, to: today(), label: 'Custom Range' };
+  }
+  return { from: `${yyyy}-${mm}-01`, to: today(), label: '' };
+}
+
+function renderFinance() {
+  const bookings = getBookings();
+  const expenses = getExpenses();
+  const { from, to, label } = getFinDateRange();
+
+  // Filter bookings in range (by startDate)
+  const rangeBookings = bookings.filter(b => b.startDate >= from && b.startDate <= to);
+  const totalRev = rangeBookings.filter(b => b.payment === 'Paid').reduce((s,b) => s + b.amount, 0);
+  const totalPending = bookings.filter(b => b.payment === 'Pending').reduce((s,b) => s + b.amount, 0);
+
+  // Filter expenses in range
+  const rangeExpenses = expenses.filter(e => (e.date||'') >= from && (e.date||'') <= to);
+  const totalExp = rangeExpenses.reduce((s,e) => s + (e.amount||0), 0);
+  const netProfit = totalRev - totalExp;
+
+  // Period label
+  const periodEl = document.getElementById('fin-period-label');
+  if (periodEl) periodEl.textContent = `📅 Period: ${label}`;
+
+  document.getElementById('fin-revenue').textContent = `₹${totalRev.toLocaleString()}`;
+  document.getElementById('fin-pending').textContent = `₹${totalPending.toLocaleString()}`;
+  document.getElementById('fin-expenses').textContent = `₹${totalExp.toLocaleString()}`;
+
+  // Overdue fees — all expired bookings (not filtered by date range, always total)
+  const overdueBookings = bookings.filter(b => b.endDate < today());
+  const totalOverdue = overdueBookings.reduce((s, b) => s + (b.amount || 0), 0);
+  const overdueEl = document.getElementById('fin-overdue');
+  const overdueSub = document.getElementById('fin-overdue-sub');
+  if (overdueEl) overdueEl.textContent = `₹${totalOverdue.toLocaleString('en-IN')}`;
+  if (overdueSub) overdueSub.textContent = `${overdueBookings.length} expired student${overdueBookings.length !== 1 ? 's' : ''}`;
+
+  const profitEl = document.getElementById('fin-profit');
+  profitEl.textContent = `₹${Math.abs(netProfit).toLocaleString()}`;
+  profitEl.style.color = netProfit >= 0 ? 'var(--green)' : 'var(--red)';
+  const profitSub = document.getElementById('fin-profit-sub');
+  if (profitSub) profitSub.textContent = netProfit >= 0 ? '✅ Profit' : '⚠️ Loss';
+
+  // Revenue vs Expense bar
+  const maxVal = Math.max(totalRev, totalExp, 1);
+  const revPct = (totalRev / maxVal * 100).toFixed(1);
+  const expPct = (totalExp / maxVal * 100).toFixed(1);
+  const revBar = document.getElementById('fin-bar-rev');
+  const expBar = document.getElementById('fin-bar-exp');
+  const pctLabel = document.getElementById('fin-bar-pct');
+  if (revBar) revBar.style.width = revPct + '%';
+  if (expBar) expBar.style.width = expPct + '%';
+  if (pctLabel) {
+    const margin = totalRev > 0 ? ((netProfit / totalRev) * 100).toFixed(1) : 0;
+    pctLabel.textContent = netProfit >= 0
+      ? `Profit margin: ${margin}%`
+      : `Loss: ₹${Math.abs(netProfit).toLocaleString()}`;
+    pctLabel.style.color = netProfit >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  // Slot-wise breakdown (filtered by range)
+  const slots = ['Morning', 'Evening', 'Full Day'];
+  document.getElementById('finance-breakdown').innerHTML = slots.map(slot => {
+    const sb = rangeBookings.filter(b => b.slot === slot);
+    const rev = sb.filter(b => b.payment === 'Paid').reduce((s,b) => s + b.amount, 0);
+    const pend = sb.filter(b => b.payment === 'Pending').reduce((s,b) => s + b.amount, 0);
+    const slotCls = { Morning: 'slot-morning', Evening: 'slot-evening', 'Full Day': 'slot-fullday' }[slot] || '';
+    return `<tr>
+      <td><span class="${slotCls}">${slot}</span></td>
+      <td>${sb.length}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--green)">₹${rev.toLocaleString()}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--accent)">₹${pend.toLocaleString()}</td>
+    </tr>`;
+  }).join('') + `<tr style="background:var(--surface2)">
+    <td style="font-weight:600;font-size:12px;padding:10px 12px">Total</td>
+    <td style="font-weight:600">${rangeBookings.length}</td>
+    <td style="font-family:'DM Mono',monospace;font-weight:700;color:var(--green)">₹${totalRev.toLocaleString()}</td>
+    <td style="font-family:'DM Mono',monospace;font-weight:700;color:var(--accent)">₹${totalPending.toLocaleString()}</td>
+  </tr>`;
+
+  // Filter expenses for table
+  const filterCat = document.getElementById('exp-filter-cat') ? document.getElementById('exp-filter-cat').value : '';
+  let filteredExp = [...rangeExpenses].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  if (filterCat) filteredExp = filteredExp.filter(e => e.category === filterCat);
+
+  const catColors = {
+    Rent: 'var(--purple)', Electricity: 'var(--accent)', Internet: 'var(--blue)',
+    Salary: 'var(--green)', Maintenance: 'var(--orange)', Stationery: 'var(--text2)', Other: 'var(--text3)'
+  };
+  const catIcons = {
+    Rent: '🏠', Electricity: '⚡', Internet: '🌐', Salary: '👤', Maintenance: '🔧', Stationery: '📝', Other: '📦'
+  };
+
+  const tbody = document.getElementById('expenses-tbody');
+  if (!tbody) return;
+  if (!filteredExp.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text3)">
+      Is period mein koi expense nahi. "+ Add Expense" se add karein.
+    </td></tr>`;
+    return;
+  }
+  const totalFiltered = filteredExp.reduce((s,e) => s + (e.amount||0), 0);
+  tbody.innerHTML = filteredExp.map((e, i) => `<tr>
+    <td style="font-family:'DM Mono',monospace;color:var(--text3);font-size:12px;text-align:center">${i+1}</td>
+    <td style="font-size:12px;color:var(--text2)">${fmtDate(e.date)}</td>
+    <td>
+      <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:${catColors[e.category]||'var(--text3)'}18;color:${catColors[e.category]||'var(--text3)'}">
+        ${catIcons[e.category]||'📦'} ${e.category||'Other'}
+      </span>
+    </td>
+    <td style="font-size:13px;color:var(--text2)">${e.desc||'—'}</td>
+    <td style="font-family:'DM Mono',monospace;color:var(--red);font-weight:600">₹${(e.amount||0).toLocaleString()}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.id}')">🗑</button></td>
+  </tr>`).join('') +
+  `<tr style="background:var(--surface2)">
+    <td colspan="4" style="font-size:12px;font-weight:600;color:var(--text2);padding:10px 12px">
+      कुल: <span style="font-family:'DM Mono',monospace;color:var(--red)">${filteredExp.length}</span> expenses
+    </td>
+    <td colspan="2" style="font-family:'DM Mono',monospace;font-weight:700;color:var(--red);padding:10px 12px">
+      ₹${totalFiltered.toLocaleString()}
+    </td>
+  </tr>`;
+}
+
+// ==================== SIDEBAR ====================
+function renderSidebar() {
+  const bookings = getBookings();
+  const t = today();
+  const in3 = addDays(t, 3);
+  const in7 = addDays(t, 7);
+
+  // Expiry
+  const expiring = bookings.filter(b => b.endDate >= t && b.endDate <= in3).sort((a,b)=>a.endDate.localeCompare(b.endDate));
+  const el = document.getElementById('expiry-list');
+  if (!expiring.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">✅</div>No expiries in next 3 days</div>`;
+  } else {
+    el.innerHTML = expiring.map(b => {
+      const daysLeft = diffDays(t, b.endDate);
+      const cls = daysLeft <= 1 ? 'urgent' : 'warning';
+      return `<div class="expiry-card ${cls}" onclick="viewBooking('${b.id}')" style="cursor:pointer">
+        <div class="name">${b.name}</div>
+        <div class="meta">§${b.section} · S${b.seat} · ${b.slot}</div>
+        <div class="meta" style="color:${cls === 'urgent' ? 'var(--red)' : 'var(--accent)'}">
+          Expires: ${fmtDate(b.endDate)} (${daysLeft === 0 ? 'Today' : daysLeft + 'd'})
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Quick stats
+  const activeBookings = bookings.filter(b => b.endDate >= t).length;
+  const weekExpiry = bookings.filter(b => b.endDate >= t && b.endDate <= in7).length;
+  const expiredCount = bookings.filter(b => b.endDate < t).length;
+  document.getElementById('qs-active').textContent = activeBookings;
+  document.getElementById('qs-week').textContent = weekExpiry;
+  document.getElementById('qs-expired').textContent = expiredCount;
+}
+
+function renderWaitingList() {
+  const waiting = getWaiting();
+  const el = document.getElementById('waiting-list');
+  if (!waiting.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">👥</div>No one waiting</div>`;
+    return;
+  }
+  el.innerHTML = waiting.map((w, i) => {
+    const slotColor = { Morning: '#f0b840', Evening: '#5a9cf0', 'Full Day': '#f05a5a' }[w.slot] || 'var(--text2)';
+    return `<div class="waiting-card">
+      <div class="info">
+        <div class="name">${w.name}</div>
+        <div class="meta">${w.phone} · <span style="color:${slotColor}">${w.slot || 'Any'}</span></div>
+      </div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-green btn-sm" title="Book seat" onclick="assignFromWaiting(${i})">+</button>
+        <button class="btn btn-danger btn-sm" onclick="removeWaiting(${i})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function addToWaiting() {
+  const name = document.getElementById('w-name').value.trim();
+  const phone = document.getElementById('w-phone').value.trim();
+  const slot = document.getElementById('w-slot').value;
+  if (!name) { showToast('Enter student name', 'error'); return; }
+  const w = getWaiting();
+  w.push({ name, phone, slot });
+  await saveWaiting(w);
+  document.getElementById('w-name').value = '';
+  document.getElementById('w-phone').value = '';
+  document.getElementById('w-slot').value = '';
+  showToast('Added to waiting list', 'success');
+  renderWaitingList();
+}
+async function removeWaiting(i) {
+  const w = getWaiting();
+  w.splice(i, 1);
+  await saveWaiting(w);
+  renderWaitingList();
+}
+function assignFromWaiting(i) {
+  const w = getWaiting();
+  const person = w[i];
+  // Pre-fill booking modal
+  openBookingModal(null, null);
+  document.getElementById('m-name').value = person.name;
+  document.getElementById('m-phone').value = person.phone || '';
+  if (person.slot) {
+    document.getElementById('m-slot').value = person.slot;
+    document.getElementById('m-amount').value = SLOT_FEES[person.slot] || '';
+    updateSeatOptions();
+  }
+  showToast(`Prefilled form for ${person.name}`, 'success');
+}
+
+// ==================== RECEIPT HTML ====================
+function generateReceipt(id) {
+  const bookings = getBookings();
+  const b = bookings.find(x => x.id === id);
+  if (!b || b.payment !== 'Paid') { showToast('Sirf paid bookings ki receipt ban sakti hai', 'error'); return; }
+
+  const s = getLibSettings();
+  const libName = s.name || 'ReadRoom Pro';
+  const libTagline = s.tagline || 'Professional Library Management System';
+  const libAddress = s.address || '';
+  const libPhone = s.phone || '';
+  const subLine = [libAddress, libPhone].filter(Boolean).join(' &nbsp;·&nbsp; ');
+  const issuedDate = new Date().toLocaleDateString('hi-IN', { day:'2-digit', month:'long', year:'numeric' });
+
+  const slotColor = { Morning: '#b86a00', Evening: '#1a5fa8', 'Full Day': '#a02020' }[b.slot] || '#555';
+
+  const html = `<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Receipt — ${b.name}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Noto Sans Devanagari', 'DM Sans', sans-serif;
+    background: #f0ebe0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .receipt {
+    background: #fffdf8;
+    width: 420px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(80,50,10,0.15);
+    border: 1px solid #e2d9c8;
+  }
+  .receipt-header {
+    background: linear-gradient(135deg, #c8820a 0%, #a86a06 100%);
+    padding: 24px 28px 20px;
+    text-align: center;
+    color: #fff;
+    position: relative;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .receipt-header::after {
+    content: '';
+    position: absolute;
+    bottom: -12px; left: 0; right: 0;
+    height: 24px;
+    background: #fffdf8;
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .lib-name {
+    font-family: 'Playfair Display', 'Noto Sans Devanagari', serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+    color: #fff;
+  }
+  .lib-tagline {
+    font-size: 12px;
+    opacity: 0.85;
+    margin-bottom: 3px;
+    color: #fff;
+  }
+  .lib-contact {
+    font-size: 11px;
+    opacity: 0.75;
+    color: #fff;
+  }
+  .receipt-label {
+    display: inline-block;
+    margin-top: 10px;
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 20px;
+    padding: 3px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  .receipt-date {
+    padding: 18px 28px 10px;
+    font-size: 11px;
+    color: #a89070;
+    font-family: 'DM Mono', monospace;
+    text-align: right;
+  }
+  .receipt-date span { color: #6b5030; font-weight: 500; }
+  .divider {
+    border: none;
+    border-top: 1px dashed #d9ceba;
+    margin: 0 28px;
+  }
+  .receipt-body { padding: 16px 28px; }
+  .field-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid #f0e8d8;
+  }
+  .field-row:last-child { border-bottom: none; }
+  .field-label {
+    font-size: 11px;
+    color: #a89070;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+  }
+  .field-value {
+    font-size: 13px;
+    color: #2a1f0f;
+    font-weight: 500;
+    text-align: right;
+    max-width: 60%;
+  }
+  .slot-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: ${slotColor}18;
+    color: ${slotColor};
+    border: 1px solid ${slotColor}40;
+  }
+  .amount-box {
+    margin: 4px 28px 20px;
+    background: linear-gradient(135deg, #fdf6e8, #faebd0);
+    border: 1.5px solid #e2c87a;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .amount-label {
+    font-size: 11px;
+    color: #a89070;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .amount-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: #c8820a;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .paid-stamp {
+    border: 2.5px solid #1e8a52;
+    color: #1e8a52;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    transform: rotate(-8deg);
+    font-family: 'DM Sans', sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .receipt-footer {
+    background: #f7f0e2;
+    border-top: 1px dashed #d9ceba;
+    padding: 14px 28px;
+    text-align: center;
+    font-size: 11px;
+    color: #b0956a;
+    line-height: 1.6;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @media print {
+    body { background: #f0ebe0 !important; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .receipt { box-shadow: none; }
+    .print-btn { display: none !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  }
+  .action-bar {
+    display: flex;
+    gap: 10px;
+    padding: 0 28px 20px;
+    flex-wrap: wrap;
+  }
+  .action-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px 10px;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    transition: all 0.15s;
+  }
+  .btn-screenshot {
+    background: #1e8a52;
+    color: #fff;
+  }
+  .btn-screenshot:hover { background: #166b40; transform: translateY(-1px); }
+  .btn-whatsapp {
+    background: #25D366;
+    color: #fff;
+  }
+  .btn-whatsapp:hover { background: #1da851; transform: translateY(-1px); }
+  .btn-print {
+    background: #f0ebe0;
+    color: #6b6253;
+    border: 1px solid #d4ccbc;
+  }
+  .btn-print:hover { background: #e5dfd4; }
+
+  /* Screenshot overlay */
+  #screenshot-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+  #screenshot-overlay.show { display: flex; }
+  #screenshot-canvas {
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    max-width: 92vw;
+    max-height: 70vh;
+    object-fit: contain;
+  }
+  .overlay-btns {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .overlay-btn {
+    padding: 13px 22px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s;
+  }
+  .overlay-btn:hover { transform: translateY(-2px); }
+  .overlay-hint {
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    text-align: center;
+    max-width: 320px;
+    line-height: 1.6;
+  }
+
+  @media print {
+    body { background: #f0ebe0 !important; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .receipt { box-shadow: none; }
+    .action-bar, #screenshot-overlay { display: none !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  }
+<\/style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
+<\/head>
+<body>
+
+<!-- Screenshot preview overlay -->
+<div id="screenshot-overlay">
+  <img id="screenshot-canvas" src="" alt="Receipt Screenshot">
+  <div class="overlay-btns">
+    <button class="overlay-btn" style="background:#25D366;color:#fff" onclick="openWhatsApp()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      WhatsApp pe Bhejo
+    </button>
+    <button class="overlay-btn" style="background:#1e8a52;color:#fff" onclick="saveScreenshot()">
+      💾 Save / Download
+    </button>
+    <button class="overlay-btn" style="background:#fff;color:#333" onclick="closeOverlay()">
+      ✕ Close
+    </button>
+  </div>
+  <div class="overlay-hint">
+    📱 Mobile mein: Screenshot save karo → WhatsApp khulega → Gallery se image bhejo
+  </div>
+</div>
+
+<div class="receipt" id="receipt-card">
+  <div class="receipt-header">
+    <div class="lib-name">${libName}</div>
+    <div class="lib-tagline">${libTagline}</div>
+    ${subLine ? `<div class="lib-contact">${subLine}</div>` : ''}
+    <div class="receipt-label">भुगतान रसीद</div>
+  </div>
+
+  <div class="receipt-date">दिनांक: <span>${issuedDate}</span></div>
+  <hr class="divider">
+
+  <div class="receipt-body">
+    <div class="field-row">
+      <div class="field-label">छात्र का नाम</div>
+      <div class="field-value">${b.name}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">फ़ोन नंबर</div>
+      <div class="field-value">${b.phone || '—'}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">सेक्शन / सीट</div>
+      <div class="field-value">Section ${b.section} &nbsp;·&nbsp; Seat ${b.seat}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">स्लॉट</div>
+      <div class="field-value"><span class="slot-badge">${b.slot}</span></div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">शुरू तारीख</div>
+      <div class="field-value">${fmtDate(b.startDate)}</div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">समाप्ति तारीख</div>
+      <div class="field-value">${fmtDate(b.endDate)}</div>
+    </div>
+    ${b.concession ? `<div class="field-row">
+      <div class="field-label">श्रेणी</div>
+      <div class="field-value" style="color:#7c4dba;font-weight:600">⭐ VIP / Concession</div>
+    </div>` : ''}
+  </div>
+
+  <div class="amount-box">
+    <div>
+      <div class="amount-label">भुगतान राशि</div>
+      <div class="amount-value">₹${b.amount.toLocaleString('hi-IN')}</div>
+    </div>
+    <div class="paid-stamp">✓ PAID</div>
+  </div>
+
+  <div class="receipt-footer">
+    यह एक कंप्यूटर-जनित रसीद है। हस्ताक्षर की आवश्यकता नहीं है।<br>
+    विद्यार्जन LIBRARY में आपका स्वागत है। धन्यवाद! 🙏
+  </div>
+</div>
+
+<!-- Action buttons — below receipt, hidden in print -->
+<div class="action-bar" style="margin-top:16px;padding:0">
+  <button class="action-btn btn-screenshot" onclick="takeScreenshot()">
+    📸 Screenshot lo
+  </button>
+  ${b.phone ? `<button class="action-btn btn-whatsapp" onclick="openWhatsAppDirect()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    WhatsApp — ${b.phone}
+  </button>` : '<div style="flex:1;text-align:center;font-size:12px;color:#a8997f;padding:12px">📵 Phone number nahi diya</div>'}
+  <button class="action-btn btn-print" onclick="window.print()">
+    🖨️ Print
+  </button>
+</div>
+
+<script>
+  const PHONE = '${b.phone ? b.phone.replace(/\D/g, '') : ''}';
+  const STUDENT = '${b.name.replace(/'/g, "\\'")}';
+  const AMOUNT = '${b.amount}';
+  const LIB = '${libName.replace(/'/g, "\\'")}';
+  let _screenshotDataUrl = null;
+
+  // Screenshot lena — html2canvas se
+  async function takeScreenshot() {
+    const btn = document.querySelector('.btn-screenshot');
+    btn.textContent = '⏳ Screenshot ban raha hai...';
+    btn.disabled = true;
+    try {
+      const canvas = await html2canvas(document.getElementById('receipt-card'), {
+        scale: 2,
+        backgroundColor: '#fffdf8',
+        useCORS: true,
+        logging: false
+      });
+      _screenshotDataUrl = canvas.toDataURL('image/png');
+      document.getElementById('screenshot-canvas').src = _screenshotDataUrl;
+      document.getElementById('screenshot-overlay').classList.add('show');
+    } catch(e) {
+      alert('Screenshot nahi bana. Browser permission check karo.');
+    }
+    btn.textContent = '📸 Screenshot lo';
+    btn.disabled = false;
+  }
+
+  // WhatsApp directly open — student ke number pe
+  function openWhatsAppDirect() {
+    if (!PHONE) { alert('Student ka phone number save nahi hai!'); return; }
+    const phone = PHONE.startsWith('91') ? PHONE : '91' + PHONE;
+    const msg = encodeURIComponent(
+      '✅ *Payment Receipt — ' + LIB + '*\\n\\n' +
+      '📚 Aapki library seat booking confirm ho gayi hai.\\n' +
+      '💰 Amount Paid: ₹' + AMOUNT + '\\n\\n' +
+      '📸 Receipt screenshot neeche dekho / save karo.'
+    );
+    window.open('https://wa.me/' + phone + '?text=' + msg, '_blank');
+  }
+
+  // Overlay se WhatsApp open
+  function openWhatsApp() {
+    closeOverlay();
+    openWhatsAppDirect();
+  }
+
+  // Screenshot save / download
+  function saveScreenshot() {
+    if (!_screenshotDataUrl) return;
+    const a = document.createElement('a');
+    a.href = _screenshotDataUrl;
+    a.download = 'Receipt_' + STUDENT + '.png';
+    a.click();
+  }
+
+  function closeOverlay() {
+    document.getElementById('screenshot-overlay').classList.remove('show');
+  }
+
+  // Overlay click outside se band
+  document.getElementById('screenshot-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeOverlay();
+  });
+<\/script>
+
+<\/body>
+<\/html>`;
+
+  const win = window.open('', '_blank', 'width=520,height=750');
+  win.document.write(html);
+  win.document.close();
+  showToast('Receipt khul gayi! Print ya PDF save karo.', 'success');
+}
+
+// ==================== TOAST ====================
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ==================== SEAT INFO MODAL ====================
+function openSeatInfoModal(section, seatNum) {
+  const bookings = getBookings();
+  const t = today();
+  const seatBookings = bookings.filter(b =>
+    b.section === section && b.seat === seatNum && b.endDate >= t
+  );
+
+  document.getElementById('seat-info-title').textContent = `🪑 Section ${section} — Seat ${seatNum}`;
+
+  if (!seatBookings.length) {
+    // No active booking, open new booking form directly
+    openBookingModal(section, seatNum);
+    return;
+  }
+
+  const body = document.getElementById('seat-info-body');
+  body.innerHTML = seatBookings.map(b => {
+    const daysLeft = diffDays(t, b.endDate);
+    const slotColor = { Morning: 'var(--accent)', Evening: 'var(--blue)', 'Full Day': 'var(--red)' }[b.slot] || 'var(--text2)';
+    const urgentColor = daysLeft <= 3 ? 'var(--red)' : daysLeft <= 7 ? 'var(--accent)' : 'var(--green)';
+    return `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:16px;font-weight:600;color:var(--text)">${b.name}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">📞 ${b.phone || '—'}</div>
+        </div>
+        <span class="payment-status ${b.payment === 'Paid' ? 'paid' : 'pending'}">${b.payment === 'Paid' ? '✓' : '⏳'} ${b.payment}</span>
+      </div>
+      <div class="info-grid" style="margin-bottom:10px">
+        <div class="info-item">
+          <div class="lbl">Slot</div>
+          <div class="val" style="color:${slotColor}">${b.slot}</div>
+        </div>
+        <div class="info-item">
+          <div class="lbl">Days Left</div>
+          <div class="val" style="color:${urgentColor};font-family:'DM Mono',monospace">${daysLeft} days</div>
+        </div>
+        <div class="info-item">
+          <div class="lbl">Start Date</div>
+          <div class="val">${fmtDate(b.startDate)}</div>
+        </div>
+        <div class="info-item">
+          <div class="lbl">End Date</div>
+          <div class="val">${fmtDate(b.endDate)}</div>
+        </div>
+        <div class="info-item">
+          <div class="lbl">Amount</div>
+          <div class="val" style="font-family:'DM Mono',monospace">₹${b.amount}</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-green btn-sm" onclick="closeModal('seat-info-modal');openRenewalModal('${b.id}')">🔁 Renew</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('seat-info-modal');editBooking('${b.id}')">✏️ Edit</button>
+        ${b.payment === 'Pending' ? `<button class="btn btn-green btn-sm" onclick="markPaid('${b.id}');closeModal('seat-info-modal')">✓ Mark Paid</button>` : ''}
+        ${b.payment === 'Paid' ? `<button class="btn btn-blue btn-sm" onclick="generateReceipt('${b.id}')">🧾 Receipt</button>` : ''}
+        <button class="btn btn-danger btn-sm" onclick="deleteBooking('${b.id}');closeModal('seat-info-modal')">🗑 Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // If seat has partial booking (morning only or evening only), show option to add new slot
+  const status = getSeatStatus(section, seatNum);
+  if (status === 'morning' || status === 'evening') {
+    const availableSlot = status === 'morning' ? 'Evening' : 'Morning';
+    body.innerHTML += `
+    <div style="border:1px dashed var(--border2);border-radius:10px;padding:12px;text-align:center;margin-top:4px">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${availableSlot} slot abhi bhi available hai</div>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('seat-info-modal');openBookingModal('${section}',${seatNum})">+ ${availableSlot} Slot Book Karo</button>
+    </div>`;
+  }
+
+  document.getElementById('seat-info-modal').classList.add('open');
+}
+
+// ==================== RENEWAL ====================
+function openRenewalModal(id) {
+  const b = getBookings().find(x => x.id === id);
+  if (!b) return;
+  document.getElementById('r-booking-id').value = id;
+  const newStart = b.endDate > today() ? b.endDate : today();
+  document.getElementById('r-startdate').value = newStart;
+  document.getElementById('r-enddate').value = addDays(newStart, 30);
+  document.getElementById('r-amount').value = b.amount;
+  document.getElementById('r-payment').value = 'Paid';
+  document.getElementById('renewal-info').innerHTML =
+    `<strong>${b.name}</strong> · Section ${b.section} · Seat ${b.seat}<br>
+     Slot: <strong>${b.slot}</strong> · Current End: <strong>${fmtDate(b.endDate)}</strong>`;
+  document.getElementById('renewal-modal').classList.add('open');
+}
+
+async function saveRenewal() {
+  const id = document.getElementById('r-booking-id').value;
+  const startDate = document.getElementById('r-startdate').value;
+  const endDate = document.getElementById('r-enddate').value;
+  const amount = parseFloat(document.getElementById('r-amount').value) || 0;
+  const payment = document.getElementById('r-payment').value;
+
+  if (!startDate || !endDate) { showToast('Please fill all fields', 'error'); return; }
+  if (endDate <= startDate) { showToast('End date must be after start date', 'error'); return; }
+
+  const bookings = getBookings();
+  const idx = bookings.findIndex(b => b.id === id);
+  if (idx === -1) { showToast('Booking not found', 'error'); return; }
+
+  const oldBooking = { ...bookings[idx] };
+  await archiveToHistory(oldBooking);
+
+  bookings[idx] = { ...bookings[idx], startDate, endDate, amount, payment };
+  await saveBookings(bookings);
+  closeModal('renewal-modal');
+  showToast(`Booking renewed till ${fmtDate(endDate)}!`, 'success');
+  renderAll();
+}
+
+// ==================== OVERDUE ====================
+function renderOverdue() {
+  const t = today();
+  // From active bookings that have expired
+  const expired = getBookings().filter(b => b.endDate < t);
+  // Also from history that were expired (for reference)
+  const el = document.getElementById('overdue-list');
+  const badge = document.getElementById('overdue-count-badge');
+  badge.textContent = expired.length;
+
+  // Summary cards
+  const summaryEl = document.getElementById('overdue-summary');
+  if (!expired.length) {
+    summaryEl.style.display = 'none';
+    el.innerHTML = `<div class="empty"><div class="empty-icon">✅</div>Koi overdue student nahi hai!</div>`;
+    return;
+  }
+
+  // Calculate totals
+  const totalFees = expired.reduce((s, b) => s + (b.amount || 0), 0);
+  const pendingFees = expired.filter(b => b.payment === 'Pending').reduce((s, b) => s + (b.amount || 0), 0);
+  const pendingCount = expired.filter(b => b.payment === 'Pending').length;
+
+  summaryEl.style.display = 'block';
+  document.getElementById('overdue-total-fees').textContent = '₹' + totalFees.toLocaleString('en-IN');
+  document.getElementById('overdue-total-sub').textContent = expired.length + ' student' + (expired.length > 1 ? 's' : '');
+  document.getElementById('overdue-pending-fees').textContent = '₹' + pendingFees.toLocaleString('en-IN');
+  document.getElementById('overdue-pending-sub').textContent = pendingCount + ' unpaid booking' + (pendingCount !== 1 ? 's' : '');
+  document.getElementById('overdue-student-count').textContent = expired.length;
+
+  el.innerHTML = expired.sort((a,b) => a.endDate.localeCompare(b.endDate)).map(b => {
+    const daysOver = diffDays(b.endDate, t);
+    const channel = b.lastMsgChannel || 'WhatsApp';
+    const channelIcon = channel === 'SMS' ? '📱' : '💬';
+    const lastMsg = b.lastWaMsgAt
+      ? `<div class="meta" style="color:var(--green);margin-top:3px">${channelIcon} Last ${channel}: ${fmtDate(b.lastWaMsgAt)}${b.lastWaMsgTime ? ' · ' + b.lastWaMsgTime : ''}</div>`
+      : `<div class="meta" style="color:var(--text3);margin-top:3px">💬 Koi message nahi bheja abhi tak</div>`;
+    return `<div class="overdue-card">
+      <div style="flex:1">
+        <div class="name">${b.name}</div>
+        <div class="meta">📞 ${b.phone || '—'} · Section ${b.section} · Seat ${b.seat} · ${b.slot}</div>
+        <div class="meta">End Date: ${fmtDate(b.endDate)}</div>
+        <div class="meta" style="margin-top:4px">
+          <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--red)">₹${b.amount}</span>
+          <span style="margin-left:6px">
+            <span class="payment-status ${b.payment === 'Paid' ? 'paid' : 'pending'}" style="font-size:10px;padding:2px 7px">${b.payment === 'Paid' ? '✓ Paid' : '⏳ Pending'}</span>
+          </span>
+        </div>
+        ${lastMsg}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div class="days-over">${daysOver}d over</div>
+        <button class="btn btn-green btn-sm" onclick="openRenewalModal('${b.id}')">🔁 Renew</button>
+        ${b.phone ? `<button class="btn btn-sm" onclick="openWaModal('${b.id}')" style="background:#25D366;color:#fff;border:none;display:flex;align-items:center;gap:5px;font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;font-weight:600">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          WhatsApp
+        </button>` : `<div style="font-size:10px;color:var(--text3);text-align:center">📵 No phone</div>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ==================== HISTORY ====================
+let _histSortCol = 'startDate';
+let _histSortDir = 'desc';
+
+function sortHistory(col) {
+  if (_histSortCol === col) {
+    _histSortDir = _histSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _histSortCol = col;
+    _histSortDir = 'asc';
+  }
+  renderHistory();
+}
+
+function renderHistory() {
+  const search = (document.getElementById('search-history')?.value || '').toLowerCase();
+  const t = today();
+  // Combine: all bookings (active + expired) + archived history
+  const allBookings = getBookings();
+  const hist = getHistory();
+  // Merge, deduplicate by id
+  const seen = new Set();
+  const combined = [...allBookings, ...hist].filter(b => {
+    if (seen.has(b.id)) return false;
+    seen.add(b.id);
+    return true;
+  });
+  const filtered = search
+    ? combined.filter(b => b.name.toLowerCase().includes(search) || (b.phone||'').includes(search))
+    : combined;
+
+  // Sort
+  filtered.sort((a, b) => {
+    let va, vb;
+    const isActiveA = allBookings.find(x => x.id === a.id) && a.endDate >= t;
+    const isActiveB = allBookings.find(x => x.id === b.id) && b.endDate >= t;
+    switch (_histSortCol) {
+      case 'name':      va = a.name.toLowerCase();   vb = b.name.toLowerCase(); break;
+      case 'seat':      va = (a.section||'') + String(a.seat||0).padStart(3,'0');
+                        vb = (b.section||'') + String(b.seat||0).padStart(3,'0'); break;
+      case 'slot':      va = a.slot;      vb = b.slot; break;
+      case 'startDate': va = a.startDate; vb = b.startDate; break;
+      case 'amount':    va = a.amount;    vb = b.amount; break;
+      case 'payment':   va = a.payment;   vb = b.payment; break;
+      case 'status':
+        va = isActiveA ? 0 : a.endDate < t ? 2 : 1;
+        vb = isActiveB ? 0 : b.endDate < t ? 2 : 1; break;
+      default:          va = a.startDate; vb = b.startDate;
+    }
+    if (va < vb) return _histSortDir === 'asc' ? -1 : 1;
+    if (va > vb) return _histSortDir === 'asc' ? 1  : -1;
+    return 0;
+  });
+
+  // Update header arrows
+  ['name','seat','slot','startDate','amount','payment','status'].forEach(col => {
+    const arr = document.getElementById('harr-' + col);
+    const th  = document.getElementById('hth-'  + col);
+    if (!arr) return;
+    if (col === _histSortCol) {
+      arr.textContent = _histSortDir === 'asc' ? '↑' : '↓';
+      th.classList.add('sort-active');
+    } else {
+      arr.textContent = '';
+      th.classList.remove('sort-active');
+    }
+  });
+
+  const tbody = document.getElementById('history-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text3)">Koi record nahi mila</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map((b, i) => {
+    const isActive = allBookings.find(x => x.id === b.id) && b.endDate >= t;
+    const isExpired = b.endDate < t;
+    const slotCls = { Morning: 'slot-morning', Evening: 'slot-evening', 'Full Day': 'slot-fullday' }[b.slot] || '';
+    let statusBadge = '';
+    if (isActive) statusBadge = `<span class="badge green">Active</span>`;
+    else if (isExpired) statusBadge = `<span class="badge red">Expired</span>`;
+    else statusBadge = `<span class="history-badge">Archived</span>`;
+    return `<tr>
+      <td style="font-family:'DM Mono',monospace;color:var(--text3);font-size:12px;text-align:center">${i + 1}</td>
+      <td>
+        <div style="font-weight:500">${b.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${b.phone || '—'}</div>
+      </td>
+      <td><span style="color:var(--text2)">§${b.section}</span> · S${b.seat}</td>
+      <td><span class="${slotCls}">${b.slot}</span></td>
+      <td>
+        <div style="font-size:12px">${fmtDate(b.startDate)}</div>
+        <div style="font-size:11px;color:${isExpired ? 'var(--red)' : 'var(--text3)'}">→ ${fmtDate(b.endDate)}</div>
+      </td>
+      <td style="font-family:'DM Mono',monospace">₹${b.amount}</td>
+      <td><span class="payment-status ${b.payment === 'Paid' ? 'paid' : 'pending'}">${b.payment === 'Paid' ? '✓' : '⏳'} ${b.payment}</span></td>
+      <td>${statusBadge}</td>
+      <td>
+        <button class="btn btn-danger btn-sm" onclick="deleteFromHistory('${b.id}')" title="Delete">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Total footer row
+  const totalAmount = filtered.reduce((s, b) => s + (b.amount || 0), 0);
+  const paidAmount  = filtered.filter(b => b.payment === 'Paid').reduce((s, b) => s + (b.amount || 0), 0);
+  const pendingAmount = filtered.filter(b => b.payment === 'Pending').reduce((s, b) => s + (b.amount || 0), 0);
+  tbody.innerHTML += `<tr style="background:var(--surface2)">
+    <td colspan="2" style="font-size:12px;font-weight:600;color:var(--text2);padding:10px 12px">
+      कुल: <span style="font-family:'DM Mono',monospace;color:var(--accent)">${filtered.length}</span> records
+    </td>
+    <td colspan="7" style="font-size:11px;color:var(--text3);padding:10px 12px;text-align:right">
+      Paid: <strong style="color:var(--green)">₹${paidAmount.toLocaleString('en-IN')}</strong>
+      &nbsp;·&nbsp;
+      Pending: <strong style="color:var(--accent)">₹${pendingAmount.toLocaleString('en-IN')}</strong>
+      &nbsp;·&nbsp;
+      Total: <strong style="font-family:'DM Mono',monospace;color:var(--text)">₹${totalAmount.toLocaleString('en-IN')}</strong>
+    </td>
+  </tr>`;
+}
+
+// ==================== VIP / CONCESSION ====================
+function openVipModal(id) {
+  document.getElementById('vip-modal-title').textContent = id ? '⭐ Edit VIP Student' : '⭐ Add VIP Student';
+  document.getElementById('v-edit-id').value = id || '';
+  if (id) {
+    const v = getVip().find(x => x.id === id);
+    if (!v) return;
+    document.getElementById('v-name').value = v.name;
+    document.getElementById('v-phone').value = v.phone || '';
+    document.getElementById('v-section').value = v.section || '';
+    document.getElementById('v-seat').value = v.seat || '';
+    document.getElementById('v-slot').value = v.slot;
+    document.getElementById('v-startdate').value = v.startDate;
+    document.getElementById('v-enddate').value = v.endDate;
+    document.getElementById('v-amount').value = v.amount;
+    document.getElementById('v-payment').value = v.payment;
+  } else {
+    document.getElementById('v-name').value = '';
+    document.getElementById('v-phone').value = '';
+    document.getElementById('v-section').value = '';
+    document.getElementById('v-seat').value = '';
+    document.getElementById('v-slot').value = 'Morning';
+    document.getElementById('v-startdate').value = today();
+    document.getElementById('v-enddate').value = addDays(today(), 30);
+    document.getElementById('v-amount').value = '';
+    document.getElementById('v-payment').value = 'Paid';
+  }
+  document.getElementById('vip-modal').classList.add('open');
+}
+
+async function saveVipStudent() {
+  const name = document.getElementById('v-name').value.trim();
+  const phone = document.getElementById('v-phone').value.trim();
+  const section = document.getElementById('v-section').value;
+  const seat = parseInt(document.getElementById('v-seat').value) || null;
+  const slot = document.getElementById('v-slot').value;
+  const startDate = document.getElementById('v-startdate').value;
+  const endDate = document.getElementById('v-enddate').value;
+  const amount = parseFloat(document.getElementById('v-amount').value) || 0;
+  const payment = document.getElementById('v-payment').value;
+  const editId = document.getElementById('v-edit-id').value;
+
+  if (!name || !startDate || !endDate) { showToast('Naam aur dates zaroori hain!', 'error'); return; }
+  if (endDate <= startDate) { showToast('End date, start date ke baad honi chahiye', 'error'); return; }
+
+  const vips = getVip();
+  if (editId) {
+    const idx = vips.findIndex(v => v.id === editId);
+    if (idx !== -1) vips[idx] = { ...vips[idx], name, phone, section, seat, slot, startDate, endDate, amount, payment };
+  } else {
+    vips.unshift({ id: genId(), name, phone, section, seat, slot, startDate, endDate, amount, payment, concession: true });
+  }
+  await window.saveVip(vips);
+  closeModal('vip-modal');
+  showToast('VIP student save ho gaya!', 'success');
+  renderVip();
+}
+
+function renderVip() {
+  const vips = getVip();
+  const t = today();
+  const tbody = document.getElementById('vip-tbody');
+  if (!vips.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)"><div style="font-size:28px;margin-bottom:8px">⭐</div>Koi VIP student nahi hai abhi</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = vips.map(v => {
+    const isActive = v.endDate >= t;
+    const slotCls = { Morning: 'slot-morning', Evening: 'slot-evening', 'Full Day': 'slot-fullday' }[v.slot] || '';
+    const seatInfo = v.section && v.seat ? `§${v.section} · S${v.seat}` : `<span style="color:var(--text3);font-style:italic">No Fixed Seat</span>`;
+    const statusBadge = isActive ? `<span class="badge green">Active</span>` : `<span class="badge red">Expired</span>`;
+    return `<tr>
+      <td>
+        <div style="font-weight:500;display:flex;align-items:center;gap:6px">⭐ ${v.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${v.phone || '—'}</div>
+      </td>
+      <td>${seatInfo}</td>
+      <td><span class="${slotCls}">${v.slot}</span></td>
+      <td>
+        <div style="font-size:12px">${fmtDate(v.startDate)}</div>
+        <div style="font-size:11px;color:${isActive ? 'var(--text3)' : 'var(--red)'}">→ ${fmtDate(v.endDate)}</div>
+      </td>
+      <td>
+        <div style="font-family:'DM Mono',monospace;color:var(--purple);font-weight:600">₹${v.amount}</div>
+        <div style="font-size:10px;color:var(--text3)">Concession</div>
+      </td>
+      <td><span class="payment-status ${v.payment === 'Paid' ? 'paid' : 'pending'}">${v.payment === 'Paid' ? '✓' : '⏳'} ${v.payment}</span></td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="openVipModal('${v.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteVip('${v.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function deleteVip(id) {
+  if (!confirm('Is VIP student ka record delete karein?')) return;
+  const vips = getVip().filter(v => v.id !== id);
+  await window.saveVip(vips);
+  showToast('VIP record delete ho gaya!', 'success');
+  renderVip();
+}
+
+// ==================== DEMO STUDENTS ====================
+function openDemoModal(id) {
+  document.getElementById('demo-modal-title').textContent = id ? '🎯 Edit Demo Student' : '🎯 Add Demo Student';
+  document.getElementById('d-edit-id').value = id || '';
+  if (id) {
+    const d = getDemo().find(x => x.id === id);
+    if (!d) return;
+    document.getElementById('d-name').value = d.name;
+    document.getElementById('d-phone').value = d.phone || '';
+    document.getElementById('d-slot').value = d.slot;
+    document.getElementById('d-startdate').value = d.startDate;
+    document.getElementById('d-days').value = d.days || 3;
+  } else {
+    document.getElementById('d-name').value = '';
+    document.getElementById('d-phone').value = '';
+    document.getElementById('d-slot').value = 'Morning';
+    document.getElementById('d-startdate').value = today();
+    document.getElementById('d-days').value = 3;
+  }
+  document.getElementById('demo-modal').classList.add('open');
+}
+
+async function saveDemoStudent() {
+  const name = document.getElementById('d-name').value.trim();
+  const phone = document.getElementById('d-phone').value.trim();
+  const slot = document.getElementById('d-slot').value;
+  const startDate = document.getElementById('d-startdate').value;
+  const days = parseInt(document.getElementById('d-days').value) || 3;
+  const editId = document.getElementById('d-edit-id').value;
+  const endDate = addDays(startDate, days);
+
+  if (!name || !startDate) { showToast('Naam aur date zaroori hai!', 'error'); return; }
+
+  const demos = getDemo();
+  if (editId) {
+    const idx = demos.findIndex(d => d.id === editId);
+    if (idx !== -1) demos[idx] = { ...demos[idx], name, phone, slot, startDate, endDate, days };
+  } else {
+    demos.unshift({ id: genId(), name, phone, slot, startDate, endDate, days, converted: false });
+  }
+  await window.saveDemo(demos);
+  closeModal('demo-modal');
+  showToast('Demo student save ho gaya!', 'success');
+  renderDemo();
+}
+
+function renderDemo() {
+  const demos = getDemo();
+  const t = today();
+  const tbody = document.getElementById('demo-tbody');
+  if (!demos.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text3)"><div style="font-size:28px;margin-bottom:8px">🎯</div>Koi demo student nahi hai abhi</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = demos.map(d => {
+    const isActive = d.endDate >= t;
+    const slotCls = { Morning: 'slot-morning', Evening: 'slot-evening', 'Full Day': 'slot-fullday' }[d.slot] || '';
+    let statusBadge = '';
+    if (d.converted) statusBadge = `<span class="badge blue">Converted</span>`;
+    else if (isActive) statusBadge = `<span class="badge green">Active Demo</span>`;
+    else statusBadge = `<span class="badge red">Expired</span>`;
+    return `<tr>
+      <td>
+        <div style="font-weight:500">🎯 ${d.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${d.phone || '—'}</div>
+      </td>
+      <td><span class="${slotCls}">${d.slot}</span></td>
+      <td>
+        <div style="font-size:12px">${fmtDate(d.startDate)}</div>
+        <div style="font-size:11px;color:var(--text3)">→ ${fmtDate(d.endDate)}</div>
+      </td>
+      <td style="font-family:'DM Mono',monospace">${d.days} din</td>
+      <td>${statusBadge}</td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${!d.converted ? `<button class="btn btn-green btn-sm" onclick="convertDemo('${d.id}')" title="Regular booking mein convert karo">✅ Convert</button>` : ''}
+          <button class="btn btn-ghost btn-sm" onclick="openDemoModal('${d.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteDemo('${d.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function convertDemo(id) {
+  const demos = getDemo();
+  const idx = demos.findIndex(d => d.id === id);
+  if (idx === -1) return;
+  demos[idx].converted = true;
+  await window.saveDemo(demos);
+  showToast('Demo student converted! Ab regular booking banao.', 'success');
+  // Pre-fill booking modal with demo student info
+  const d = demos[idx];
+  openBookingModal(null, null);
+  setTimeout(() => {
+    document.getElementById('m-name').value = d.name;
+    document.getElementById('m-phone').value = d.phone || '';
+    document.getElementById('m-slot').value = d.slot;
+  }, 100);
+  renderDemo();
+}
+
+async function deleteDemo(id) {
+  if (!confirm('Is demo student ka record delete karein?')) return;
+  const demos = getDemo().filter(d => d.id !== id);
+  await window.saveDemo(demos);
+  showToast('Demo record delete ho gaya!', 'success');
+  renderDemo();
+}
+
+// ==================== DELETE FROM HISTORY ====================
+async function deleteFromHistory(id) {
+  if (!confirm('Kya aap is student ka record permanently delete karna chahte hain?')) return;
+
+  // Remove from active bookings if present
+  const bookings = getBookings();
+  const newBookings = bookings.filter(b => b.id !== id);
+  if (newBookings.length !== bookings.length) {
+    await saveBookings(newBookings);
+  }
+
+  // Remove from history if present
+  const hist = getHistory();
+  const newHist = hist.filter(h => h.id !== id);
+  if (newHist.length !== hist.length) {
+    await saveHistory(newHist);
+  }
+
+  showToast('Record delete ho gaya!', 'success');
+  renderAll();
+  renderHistory();
+}
+
+// ==================== WHATSAPP ====================
+function openWaModal(id) {
+  const b = getBookings().find(x => x.id === id);
+  if (!b) return;
+  const t = today();
+  const daysOver = diffDays(b.endDate, t);
+  const s = getLibSettings();
+  const libName = s.name || 'विद्यार्जन LIBRARY';
+
+  // Store booking id for later use
+  document.getElementById('wa-modal').dataset.bookingId = id;
+
+  // Student info display
+  document.getElementById('wa-student-info').innerHTML =
+    `<strong>${b.name}</strong> &nbsp;·&nbsp; 📞 ${b.phone} &nbsp;·&nbsp; Section ${b.section} · Seat ${b.seat} · ${b.slot}`;
+
+  // Preset message
+  const presetMsg =
+`नमस्ते ${b.name} जी! 🙏
+
+${libName} की तरफ से आपको सूचित किया जाता है कि आपकी सीट की समय-सीमा ${fmtDate(b.endDate)} को समाप्त हो गई है।
+
+⏰ ${daysOver} दिन हो गए हैं।
+📍 Section ${b.section} · Seat ${b.seat} · ${b.slot}
+
+कृपया जल्द से जल्द नवीनीकरण (Renewal) करवाएं, अन्यथा सीट किसी अन्य छात्र को दे दी जाएगी।
+
+धन्यवाद! 🙏`;
+
+  document.getElementById('wa-message').value = presetMsg;
+
+  // Last message info
+  const lastEl = document.getElementById('wa-last-sent');
+  if (b.lastWaMsgAt) {
+    const channel = b.lastMsgChannel || 'WhatsApp';
+    const icon = channel === 'SMS' ? '📱' : '💬';
+    lastEl.style.display = 'block';
+    lastEl.innerHTML = `${icon} पिछला ${channel} message: <strong style="color:var(--accent)">${fmtDate(b.lastWaMsgAt)}${b.lastWaMsgTime ? ' को ' + b.lastWaMsgTime + ' बजे' : ''}</strong>`;
+  } else {
+    lastEl.style.display = 'block';
+    lastEl.innerHTML = `💬 इस student को अभी तक कोई message नहीं भेजा गया।`;
+  }
+
+  document.getElementById('wa-modal').classList.add('open');
+}
+
+async function sendWhatsApp() {
+  const id = document.getElementById('wa-modal').dataset.bookingId;
+  const msg = document.getElementById('wa-message').value.trim();
+  if (!msg) { showToast('Message khali nahi ho sakta!', 'error'); return; }
+
+  const bookings = getBookings();
+  const idx = bookings.findIndex(b => b.id === id);
+  if (idx === -1) return;
+
+  const phone = bookings[idx].phone.replace(/\D/g, '');
+  const fullPhone = phone.startsWith('91') ? phone : '91' + phone;
+
+  // Save last message timestamp
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  bookings[idx].lastWaMsgAt = today();
+  bookings[idx].lastWaMsgTime = timeStr;
+  bookings[idx].lastMsgChannel = 'WhatsApp';
+  await saveBookings(bookings);
+
+  const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`;
+  window.open(waUrl, '_blank');
+
+  closeModal('wa-modal');
+  showToast(`WhatsApp khul gaya — ${bookings[idx].name} ko message bhejo!`, 'success');
+  renderOverdue();
+}
+
+async function sendSMS() {
+  const id = document.getElementById('wa-modal').dataset.bookingId;
+  const msg = document.getElementById('wa-message').value.trim();
+  if (!msg) { showToast('Message khali nahi ho sakta!', 'error'); return; }
+
+  const bookings = getBookings();
+  const idx = bookings.findIndex(b => b.id === id);
+  if (idx === -1) return;
+
+  const phone = bookings[idx].phone.replace(/\D/g, '');
+
+  // Save last message timestamp
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  bookings[idx].lastWaMsgAt = today();
+  bookings[idx].lastWaMsgTime = timeStr;
+  bookings[idx].lastMsgChannel = 'SMS';
+  await saveBookings(bookings);
+
+  // SMS link — works on mobile
+  const smsUrl = `sms:+91${phone}?body=${encodeURIComponent(msg)}`;
+  window.open(smsUrl, '_blank');
+
+  closeModal('wa-modal');
+  showToast(`SMS app khul gaya — ${bookings[idx].name} ko message bhejo!`, 'success');
+  renderOverdue();
+}
+
+// ==================== EXPENSES ====================
+function openExpenseModal() {
+  document.getElementById('exp-date').value = today();
+  document.getElementById('exp-amount').value = '';
+  document.getElementById('exp-category').value = 'Rent';
+  document.getElementById('exp-desc').value = '';
+  document.getElementById('expense-modal').classList.add('open');
+}
+
+async function saveExpense() {
+  const date = document.getElementById('exp-date').value;
+  const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
+  const category = document.getElementById('exp-category').value;
+  const desc = document.getElementById('exp-desc').value.trim();
+  if (!date || !amount) { showToast('Date aur amount required hai', 'error'); return; }
+  const expenses = getExpenses();
+  expenses.push({ id: genId(), date, amount, category, desc });
+  await saveExpenses(expenses);
+  closeModal('expense-modal');
+  renderFinance();
+  showToast('Expense add ho gaya!', 'success');
+}
+
+async function deleteExpense(id) {
+  if (!confirm('Is expense ko delete karein?')) return;
+  const expenses = getExpenses().filter(e => e.id !== id);
+  await saveExpenses(expenses);
+  renderFinance();
+  showToast('Expense delete ho gaya', 'success');
+}
+
+// ==================== RENDER ALL ====================
+function renderAll() {
+  renderSeatGrid('A');
+  renderSeatGrid('B');
+  updateStats();
+  renderBookingsTable();
+  renderSidebar();
+  renderWaitingList();
+  renderFinance();
+  renderOverdue();
+  renderVip();
+  renderDemo();
+  applyDarkIcon();
+}
+
+// Expose functions needed by onclick handlers in HTML
+window.openWaModal = openWaModal;
+window.sendWhatsApp = sendWhatsApp;
+window.sendSMS = sendSMS;
+window.openVipModal = openVipModal;
+window.saveVipStudent = saveVipStudent;
+window.deleteVip = deleteVip;
+window.openDemoModal = openDemoModal;
+window.saveDemoStudent = saveDemoStudent;
+window.deleteDemo = deleteDemo;
+window.convertDemo = convertDemo;
+window.openBookingModal = openBookingModal;
+window.closeModal = closeModal;
+window.saveBooking = saveBooking;
+window.editBooking = editBooking;
+window.deleteBooking = deleteBooking;
+window.viewBooking = viewBooking;
+window.markPaid = markPaid;
+window.generateReceipt = generateReceipt;
+window.openRenewalModal = openRenewalModal;
+window.saveRenewal = saveRenewal;
+window.openSeatInfoModal = openSeatInfoModal;
+window.switchTab = switchTab;
+window.switchSection = switchSection;
+window.updateSeatOptions = updateSeatOptions;
+window.sortBookings = sortBookings;
+window.renderBookingsTable = renderBookingsTable;
+window.renderHistory = renderHistory;
+window.sortHistory = sortHistory;
+window.addToWaiting = addToWaiting;
+window.removeWaiting = removeWaiting;
+window.assignFromWaiting = assignFromWaiting;
+window.deleteFromHistory = deleteFromHistory;
+window.openSettings = openSettings;
+window.saveSettings = saveSettings;
+window.openExpenseModal = openExpenseModal;
+window.saveExpense = saveExpense;
+window.deleteExpense = deleteExpense;
+window.setFinRange = setFinRange;
+
+// ==================== SETTINGS ====================
+// getLibSettings and saveLibSettings are defined in the Firebase module above
+function applyLibSettings() {
+  const s = getLibSettings();
+  const name = s.name || 'ReadRoom';
+  const tagline = s.tagline || 'Pro — Library Management';
+  document.getElementById('header-logo').childNodes[0].textContent = name + ' ';
+  document.getElementById('header-sub').textContent = tagline;
+  document.title = name + ' — Library Management';
+}
+function openSettings() {
+  const s = getLibSettings();
+  document.getElementById('s-lib-name').value = s.name || '';
+  document.getElementById('s-lib-tagline').value = s.tagline || '';
+  document.getElementById('s-lib-address').value = s.address || '';
+  document.getElementById('s-lib-phone').value = s.phone || '';
+  document.getElementById('settings-modal').classList.add('open');
+}
+async function saveSettings() {
+  const s = {
+    name: document.getElementById('s-lib-name').value.trim() || 'ReadRoom',
+    tagline: document.getElementById('s-lib-tagline').value.trim() || 'Pro — Library Management',
+    address: document.getElementById('s-lib-address').value.trim(),
+    phone: document.getElementById('s-lib-phone').value.trim(),
+  };
+  await saveLibSettings(s);
+  applyLibSettings();
+  closeModal('settings-modal');
+  showToast('Settings saved!', 'success');
+}
+
+// ==================== DARK MODE ====================
+function toggleDarkMode() {
+  const isDark = document.body.classList.toggle('dark-mode');
+  localStorage.setItem('vl_dark', isDark ? '1' : '0');
+  document.getElementById('dark-toggle-btn').textContent = isDark ? '☀️' : '🌙';
+}
+// Restore preference on load — apply class early, fix icon after DOM is ready
+if (localStorage.getItem('vl_dark') === '1') {
+  document.body.classList.add('dark-mode');
+}
+function applyDarkIcon() {
+  const btn = document.getElementById('dark-toggle-btn');
+  if (btn && document.body.classList.contains('dark-mode')) btn.textContent = '☀️';
+}
+// Called after renderAll to ensure button exists
+window.toggleDarkMode = toggleDarkMode;
+
+// ==================== HEADER DATE ====================
+function updateHeaderDate() {
+  const d = new Date();
+  document.getElementById('header-date').textContent =
+    d.toLocaleDateString('en-IN', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+}
+
+// ==================== LOCK SCREEN (Pattern + PIN) ====================
+// 🔐 Apna pattern set karein — dot numbers 1-9
+const CORRECT_PATTERN = [1, 2, 3, 5, 7, 4]; // ← Pattern badlein
+// 🔢 Apna PIN set karein — 4 digits
+const CORRECT_PIN = '1025'; // ← PIN badlein
+
+let currentPattern = [];
+let isDrawing = false;
+let patternLocked = false;
+let currentPin = '';
+let _lockTab = 'pattern'; // 'pattern' | 'pin'
+
+// Tab switcher
+function switchLockTab(tab) {
+  _lockTab = tab;
+  const isPattern = tab === 'pattern';
+
+  // Tab buttons
+  const btnP = document.getElementById('lock-tab-pattern');
+  const btnN = document.getElementById('lock-tab-pin');
+  btnP.style.background   = isPattern ? '#c8820a' : 'transparent';
+  btnP.style.color        = isPattern ? '#fff'    : '#a89070';
+  btnN.style.background   = !isPattern ? '#c8820a' : 'transparent';
+  btnN.style.color        = !isPattern ? '#fff'    : '#a89070';
+
+  // Panels
+  document.getElementById('lock-panel-pattern').style.display = isPattern ? 'flex' : 'none';
+  document.getElementById('lock-panel-pin').style.display     = !isPattern ? 'flex' : 'none';
+
+  // Reset both
+  clearPattern();
+  pinReset();
+  document.getElementById('lock-status').textContent = '';
+}
+
+function setLockStatus(msg, color) {
+  const el = document.getElementById('lock-status');
+  el.textContent = msg;
+  el.style.color = color;
+}
+
+// ---- UNLOCK helper (common for both) ----
+function unlockSuccess() {
+  setLockStatus('✅ Login ho raha hai...', '#1e8a52');
+  sessionStorage.setItem('vl_auth', 'true');
+  setTimeout(() => {
+    document.getElementById('pattern-lock-screen').style.display = 'none';
+    renderAll();
+  }, 600);
+}
+
+// ==================== PATTERN ====================
+function initPatternLock() {
+  if (sessionStorage.getItem('vl_auth') === 'true') return;
+  const grid = document.getElementById('pattern-grid');
+  grid.innerHTML = '';
+  for (let i = 1; i <= 9; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'pdot';
+    dot.dataset.num = i;
+    dot.innerHTML = `<div class="inner"></div><span class="pattern-dot-num">${i}</span>`;
+    grid.appendChild(dot);
+  }
+  grid.addEventListener('touchstart', onTouchStart, { passive: false });
+  grid.addEventListener('touchmove',  onTouchMove,  { passive: false });
+  grid.addEventListener('touchend',   onTouchEnd);
+  grid.addEventListener('mousedown',  onMouseDown);
+  grid.addEventListener('mousemove',  onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function getDotFromPoint(x, y) {
+  for (const dot of document.querySelectorAll('.pdot')) {
+    const r = dot.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return dot;
+  }
+  return null;
+}
+
+function selectDot(dot) {
+  if (!dot || patternLocked) return;
+  const num = parseInt(dot.dataset.num);
+  if (currentPattern.includes(num)) return;
+  currentPattern.push(num);
+  dot.classList.add('selected');
+  updatePatternDisplay();
+  document.getElementById('pattern-clear-btn').style.display = 'block';
+}
+
+function updatePatternDisplay() {
+  document.getElementById('pattern-display').innerHTML =
+    currentPattern.map((n, i) =>
+      `<div style="width:10px;height:10px;border-radius:50%;background:#c8820a;opacity:${0.4 + i*0.15}"></div>`
+    ).join('');
+}
+
+function onTouchStart(e) { e.preventDefault(); if(patternLocked) return; isDrawing=true; selectDot(getDotFromPoint(e.touches[0].clientX, e.touches[0].clientY)); }
+function onTouchMove(e)  { e.preventDefault(); if(!isDrawing||patternLocked) return; selectDot(getDotFromPoint(e.touches[0].clientX, e.touches[0].clientY)); }
+function onTouchEnd(e)   { e.preventDefault(); isDrawing=false; if(currentPattern.length>=2) checkPattern(); }
+function onMouseDown(e)  { if(patternLocked) return; isDrawing=true; selectDot(getDotFromPoint(e.clientX, e.clientY)); }
+function onMouseMove(e)  { if(!isDrawing||patternLocked) return; selectDot(getDotFromPoint(e.clientX, e.clientY)); }
+function onMouseUp()     { if(!isDrawing) return; isDrawing=false; if(currentPattern.length>=2) checkPattern(); }
+
+function checkPattern() {
+  patternLocked = true;
+  if (currentPattern.join(',') === CORRECT_PATTERN.join(',')) {
+    document.querySelectorAll('.pdot.selected').forEach(d => d.style.borderColor='#1e8a52');
+    unlockSuccess();
+  } else {
+    setLockStatus('❌ Galat pattern! Dobara try karein', '#c0392b');
+    document.querySelectorAll('.pdot.selected').forEach(d => d.classList.add('error'));
+    setTimeout(() => clearPattern(), 1200);
+  }
+}
+
+function clearPattern() {
+  currentPattern = []; patternLocked = false;
+  document.querySelectorAll('.pdot').forEach(d => { d.classList.remove('selected','error'); d.style.borderColor=''; });
+  document.getElementById('pattern-display').innerHTML = '';
+  if (_lockTab === 'pattern') document.getElementById('lock-status').textContent = '';
+  document.getElementById('pattern-clear-btn').style.display = 'none';
+}
+
+// ==================== PIN ====================
+function pinInput(digit) {
+  if (currentPin.length >= 4) return;
+  currentPin += digit;
+  updatePinDots();
+  if (currentPin.length === 4) {
+    setTimeout(checkPin, 120);
+  }
+}
+
+function pinDelete() {
+  currentPin = currentPin.slice(0, -1);
+  updatePinDots();
+}
+
+function pinClear() {
+  pinReset();
+  setLockStatus('', '#a89070');
+}
+
+function pinReset() {
+  currentPin = '';
+  updatePinDots();
+}
+
+function updatePinDots(state) {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('pd' + i);
+    if (!dot) continue;
+    dot.className = 'pin-dot';
+    if (state === 'error')   { dot.classList.add('error'); }
+    else if (state === 'success') { dot.classList.add('success'); }
+    else if (i < currentPin.length) { dot.classList.add('filled'); }
+  }
+}
+
+function checkPin() {
+  if (currentPin === CORRECT_PIN) {
+    updatePinDots('success');
+    unlockSuccess();
+  } else {
+    updatePinDots('error');
+    setLockStatus('❌ Galat PIN! Dobara try karein', '#c0392b');
+    setTimeout(() => { pinReset(); setLockStatus('', '#a89070'); }, 1200);
+  }
+}
+
+// Init
+initPatternLock();
+window.clearPattern = clearPattern;
+window.switchLockTab = switchLockTab;
+window.pinInput  = pinInput;
+window.pinDelete = pinDelete;
+window.pinClear  = pinClear;
+
+// ==================== INIT ====================
+updateHeaderDate();
+setInterval(updateHeaderDate, 60000);
+// NOTE: renderAll(), applyLibSettings(), and sample data seeding
+// are now called inside initFirebase() above after Firebase loads.
+</script>
+</body>
+</html>
